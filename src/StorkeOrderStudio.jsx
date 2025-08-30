@@ -35,9 +35,25 @@ const styles = `
 .btn:disabled{opacity:.5;cursor:default}
 .muted{font-size:12px;color:var(--muted)}
 .warn{font-size:12px;color:#92400e;background:#fef3c7;border:1px solid #fde68a;padding:6px 10px;border-radius:8px}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{border:1px solid var(--br);border-radius:999px;padding:6px 10px;font-size:13px;cursor:pointer;background:#fff}
-.chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* CHIPS — luôn hiển thị rõ ký tự khi chưa chọn */
+.chip{
+  background:#fff;
+  color: var(--ink) !important;     /* ép màu chữ cho chip thường */
+  border:1px solid var(--br);
+}
+.chip:hover{ background:#f9fafb; }
+
+.chip.active{
+  background: var(--accent);
+  color:#fff !important;            /* chip đang chọn: chữ trắng */
+  border-color: var(--accent);
+}
+
+/* (tuỳ chọn) kích thước trông đều hơn */
+.chips{ gap:8px; }
+.chip{ min-width:36px; height:36px; padding:0 10px;
+       display:inline-flex; align-items:center; justify-content:center;
+       border-radius:999px; font-size:14px; }
 .stage{display:flex;align-items:center;justify-content:center;padding:12px}
 .stageInner{display:flex;flex-direction:column;align-items:center;gap:10px}
 .mount{display:block;border:2px solid #cfe0ff;border-radius:14px;}
@@ -777,7 +793,7 @@ export default function HanziStrokeApp() {
   return (
     <div className="app">
       <div className="wrap">
-        <h1 className="h1">Tra cứu thứ tự nét chữ Hán — cấu trúc dọc</h1>
+        <h1 className="h1">Tra cứu thứ tự nét chữ Hán</h1>
 
         {/* TOP: CONTROLS */}
         <div className="section">
