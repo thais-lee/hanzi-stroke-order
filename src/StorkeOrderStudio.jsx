@@ -40,7 +40,7 @@ const styles = `
 .chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .stage{display:flex;align-items:center;justify-content:center;padding:12px}
 .stageInner{display:flex;flex-direction:column;align-items:center;gap:10px}
-.mount{display:block;border:2px solid #cfe0ff;border-radius:14px;padding:10px}
+.mount{display:block;border:2px solid #cfe0ff;border-radius:14px;}
 .stepTitle{display:flex;align-items:baseline;justify-content:space-between}
 .stepsGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px;margin-top:10px}
 .stepBox{border:1px solid var(--br);border-radius:10px}
@@ -147,10 +147,7 @@ export default function HanziStrokeApp() {
   const [error, setError] = useState('');
 
   // Derived padding (no UI), keeps character centered relative to box
-  const basePadding = useMemo(
-    () => Math.max(6, Math.round(size * 0.05)),
-    [size],
-  );
+  const basePadding = useMemo(() => Math.round(size * 0.05), [size]);
 
   // ---------- Main writer ----------
   const mainMountRef = useRef(null);
