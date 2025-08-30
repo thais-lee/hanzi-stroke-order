@@ -420,76 +420,76 @@ export default function HanziStrokeApp() {
     setBusyMsg('');
   };
 
-  const exportGIF = async () => {
-    if (!selected) return;
-    setBusyMsg('Đang kết xuất GIF…');
+  // const exportGIF = async () => {
+  //   if (!selected) return;
+  //   setBusyMsg('Đang kết xuất GIF…');
 
-    const outDim = Math.round(size * exportMult);
+  //   const outDim = Math.round(size * exportMult);
 
-    // Hidden hi‑res writer
-    const mnt = hiddenMountRef.current;
-    mnt.innerHTML = '';
-    const writer = HanziWriter.create(mnt, selected, {
-      width: outDim,
-      height: outDim,
-      padding: Math.round(basePadding * exportMult),
-      showOutline,
-      showCharacter: showChar,
-      strokeAnimationSpeed: speed,
-      delayBetweenStrokes,
-      strokeColor,
-      radicalColor,
-      renderer: 'canvas',
-      charDataLoader: (c, done) => {
-        loadCharData(c).then(done);
-      },
-    });
-    const srcCanvas = mnt.querySelector('canvas');
-    if (!srcCanvas) {
-      setBusyMsg('');
-      alert('Không tìm thấy canvas để xuất GIF');
-      return;
-    }
+  //   // Hidden hi‑res writer
+  //   const mnt = hiddenMountRef.current;
+  //   mnt.innerHTML = '';
+  //   const writer = HanziWriter.create(mnt, selected, {
+  //     width: outDim,
+  //     height: outDim,
+  //     padding: Math.round(basePadding * exportMult),
+  //     showOutline,
+  //     showCharacter: showChar,
+  //     strokeAnimationSpeed: speed,
+  //     delayBetweenStrokes,
+  //     strokeColor,
+  //     radicalColor,
+  //     renderer: 'canvas',
+  //     charDataLoader: (c, done) => {
+  //       loadCharData(c).then(done);
+  //     },
+  //   });
+  //   const srcCanvas = mnt.querySelector('canvas');
+  //   if (!srcCanvas) {
+  //     setBusyMsg('');
+  //     alert('Không tìm thấy canvas để xuất GIF');
+  //     return;
+  //   }
 
-    const { comp, ctx } = makeCompositeCanvas(srcCanvas, outDim);
-    const fps = exportFps;
-    const delayMs = Math.round(1000 / fps);
-    const gif = new GIF({
-      workers: 2,
-      quality: 10,
-      width: outDim,
-      height: outDim,
-    });
+  //   const { comp, ctx } = makeCompositeCanvas(srcCanvas, outDim);
+  //   const fps = exportFps;
+  //   const delayMs = Math.round(1000 / fps);
+  //   const gif = new GIF({
+  //     workers: 2,
+  //     quality: 10,
+  //     width: outDim,
+  //     height: outDim,
+  //   });
 
-    let capturing = true;
-    function tick() {
-      if (!capturing) return;
-      ctx.clearRect(0, 0, outDim, outDim);
-      drawGridOnCtx(ctx, outDim, '#fff');
-      ctx.drawImage(srcCanvas, 0, 0, outDim, outDim);
-      gif.addFrame(comp, { copy: true, delay: delayMs });
-      requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
+  //   let capturing = true;
+  //   function tick() {
+  //     if (!capturing) return;
+  //     ctx.clearRect(0, 0, outDim, outDim);
+  //     drawGridOnCtx(ctx, outDim, '#fff');
+  //     ctx.drawImage(srcCanvas, 0, 0, outDim, outDim);
+  //     gif.addFrame(comp, { copy: true, delay: delayMs });
+  //     requestAnimationFrame(tick);
+  //   }
+  //   requestAnimationFrame(tick);
 
-    await writer.animateCharacter();
-    setTimeout(() => {
-      capturing = false;
-      gif.render();
-    }, 120);
+  //   await writer.animateCharacter();
+  //   setTimeout(() => {
+  //     capturing = false;
+  //     gif.render();
+  //   }, 120);
 
-    gif.on('finished', blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `hanzi-${selected}-${outDim}px-${fps}fps.gif`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      setBusyMsg('');
-    });
-  };
+  //   gif.on('finished', blob => {
+  //     const url = URL.createObjectURL(blob);
+  //     const a = document.createElement('a');
+  //     a.href = url;
+  //     a.download = `hanzi-${selected}-${outDim}px-${fps}fps.gif`;
+  //     document.body.appendChild(a);
+  //     a.click();
+  //     a.remove();
+  //     URL.revokeObjectURL(url);
+  //     setBusyMsg('');
+  //   });
+  // };
 
   const outDimDisplay = Math.round(size * exportMult);
 
@@ -954,10 +954,10 @@ export default function HanziStrokeApp() {
               </button>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn" onClick={exportGIF}>
+              {/* <button className="btn" onClick={exportGIF}>
                 Tải GIF
-              </button>
-              <button className="btn secondary" onClick={exportWebM}>
+              </button> */}
+              <button className="btn" onClick={exportWebM}>
                 Tải WebM
               </button>
             </div>
