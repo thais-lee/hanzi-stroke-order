@@ -998,8 +998,7 @@ export default function HanziStrokeApp() {
           <div ref={stepsRef} className="stepsGrid" />
           <div className="row" style={{ marginTop: 8 }}>
             <div className="muted">
-              Gợi ý: dữ liệu tải từ <code>hanzi-writer-data</code> nếu có, dự
-              phòng CDN jsDelivr; xuất GIF/WebM có nền trắng + lưới 3×3.
+              Dữ liệu tải từ <code>hanzi-writer-data</code>
             </div>
           </div>
         </div>
