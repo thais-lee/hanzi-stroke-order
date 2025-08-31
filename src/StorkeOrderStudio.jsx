@@ -19,9 +19,16 @@ const styles = `
 :root { --bg:#fafafa; --ink:#111; --muted:#6b7280; --br:#e5e7eb; --accent:#3b82f6; }
 *{box-sizing:border-box} body{margin:0}
 .app{min-height:100vh;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;}
-.wrap{max-width:1100px;margin:0 auto;padding:22px}
+.wrap{
+//   // width: 100vw !important;
+  margin-left: calc(50% - 25vw) !important;
+  margin-right: calc(50% - 25vw) !important;
+//   // max-width: none !important;
+  padding: clamp(12px, 2vw, 28px);
+}
 .h1{font-size:22px;font-weight:600;margin:0 0 14px}
 .section{background:#fff;border:1px solid var(--br);border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.04);padding:14px;margin-bottom:14px}
+.section{max-width:1300;margin-left:auto;margin-right:auto}
 .row{display:flex;align-items:center;gap:10px;margin:10px 0}
 .row label{min-width:160px;color:#374151;font-size:13px}
 .input, .select, .textarea{border:1px solid var(--br);border-radius:10px;padding:8px 10px;font-size:14px}
@@ -783,6 +790,153 @@ export default function HanziStrokeApp() {
     }
   };
 
+  //export Mp4
+  const exportMP4 = async () => {
+    if (!selected) return;
+    setBusyMsg('Đang ghi video…');
+
+    const outDim = Math.round(size * exportMult);
+
+    // 1) Tạo writer hi-res để xuất (giống exportWebM)
+    const mnt = hiddenMountRef.current;
+    mnt.innerHTML = '';
+    const writer = HanziWriter.create(mnt, selected, {
+      width: outDim,
+      height: outDim,
+      padding: Math.round(basePadding * exportMult),
+      showOutline,
+      showCharacter: showChar,
+      strokeAnimationSpeed: speed,
+      delayBetweenStrokes,
+      strokeColor,
+      radicalColor,
+      renderer: 'canvas',
+      charDataLoader: (c, done) => {
+        loadCharData(c).then(done);
+      },
+    });
+    const srcCanvas = mnt.querySelector('canvas');
+    if (!srcCanvas) {
+      setBusyMsg('');
+      alert('Không tìm thấy canvas');
+      return;
+    }
+
+    const { comp, ctx } = makeCompositeCanvas(srcCanvas, outDim);
+    const stream = comp.captureStream(exportFps);
+
+    // 2) Ưu tiên MP4 nếu MediaRecorder hỗ trợ (Safari)
+    const preferMp4 = ['video/mp4;codecs=h264', 'video/mp4'];
+    let mime = null;
+    for (const t of preferMp4) {
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported(t)) {
+        mime = t;
+        break;
+      }
+    }
+    const isDirectMp4 = !!mime;
+    if (!mime) {
+      // fallback WebM
+      mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : 'video/webm';
+    }
+
+    const chunks = [];
+    const rec = new MediaRecorder(stream, {
+      mimeType: mime,
+      videoBitsPerSecond:
+        Math.max(2000, Math.min(50000, exportBitrateKbps)) * 1000,
+    });
+    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    const stopped = new Promise(res => (rec.onstop = () => res()));
+
+    let recording = true;
+    const drawLoop = () => {
+      if (!recording) return;
+      ctx.clearRect(0, 0, outDim, outDim);
+      drawGridOnCtx(ctx, outDim, '#fff');
+      ctx.drawImage(srcCanvas, 0, 0, outDim, outDim);
+      requestAnimationFrame(drawLoop);
+    };
+
+    rec.start();
+    requestAnimationFrame(drawLoop);
+    await writer.animateCharacter();
+    setTimeout(() => {
+      recording = false;
+      rec.stop();
+    }, 120);
+    await stopped;
+
+    let blob = new Blob(chunks, { type: mime });
+
+    // 3) Nếu đã là MP4 → tải luôn
+    if (isDirectMp4) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `hanzi-${selected}-${outDim}px-${exportFps}fps.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setBusyMsg('');
+      return;
+    }
+
+    // 4) Không hỗ trợ MP4: chuyển WebM -> MP4 bằng ffmpeg.wasm
+    try {
+      setBusyMsg('Đang chuyển sang MP4… có thể mất vài chục giây lần đầu');
+      const { FFmpeg } = await import('@ffmpeg/ffmpeg');
+      const { fetchFile } = await import('@ffmpeg/util');
+      const ffmpeg = new FFmpeg();
+
+      ffmpeg.on('progress', p => {
+        if (p?.progress != null) {
+          setBusyMsg(`Đang chuyển MP4… ${Math.round(p.progress * 100)}%`);
+        }
+      });
+
+      await ffmpeg.load(); // tải core (~25–30MB)
+      await ffmpeg.writeFile('in.webm', await fetchFile(blob));
+
+      // H.264 + yuv420p để đảm bảo MP4 phát được mọi nơi
+      await ffmpeg.exec([
+        '-i',
+        'in.webm',
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        '-movflags',
+        '+faststart',
+        '-r',
+        String(exportFps),
+        'out.mp4',
+      ]);
+
+      const data = await ffmpeg.readFile('out.mp4');
+      blob = new Blob([data.buffer], { type: 'video/mp4' });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `hanzi-${selected}-${outDim}px-${exportFps}fps.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert(
+        'Chuyển MP4 thất bại. Bạn có thể dùng file WebM rồi chuyển bằng FFmpeg/HandBrake ngoài máy.',
+      );
+    } finally {
+      setBusyMsg('');
+    }
+  };
+
   useEffect(
     () => () => {
       if (pdfUrl) URL.revokeObjectURL(pdfUrl);
@@ -793,7 +947,20 @@ export default function HanziStrokeApp() {
   return (
     <div className="app">
       <div className="wrap">
-        <h1 className="h1">Tra cứu thứ tự nét chữ Hán</h1>
+        <h1 className="h1" style={{
+          marginBottom: 20, fontSize: '2.6rem',
+          background: 'linear-gradient(90deg, #ff8a00, #e52e71)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          fontWeight: 'bold',
+          textAlign: 'center',
+          textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          userSelect: 'none',
+          letterSpacing: '0.05em',
+          marginTop: '12px'
+        }}>
+          Tra cứu thứ tự nét chữ Hán
+        </h1>
 
         {/* TOP: CONTROLS */}
         <div className="section">
@@ -973,6 +1140,9 @@ export default function HanziStrokeApp() {
               {/* <button className="btn" onClick={exportGIF}>
                 Tải GIF
               </button> */}
+              <button className="btn" onClick={exportMP4}>
+                Tải MP4
+              </button>
               <button className="btn" onClick={exportWebM}>
                 Tải WebM
               </button>

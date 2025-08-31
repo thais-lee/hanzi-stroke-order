@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "gif.js.optimized": "^1.0.1",
     "hanzi-writer": "^3.7.2",
     "hanzi-writer-data": "^2.0.1",
