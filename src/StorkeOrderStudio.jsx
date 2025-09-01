@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import HanziWriter from 'hanzi-writer';
 import GIF from 'gif.js.optimized'; // direct GIF export
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'; // PDF sheet export + preview + custom font
+import JSZip from 'jszip';
 
 /**
  * Hanzi Stroke Order – Vertical Layout (Hi-Res Export + PDF Practice Sheets w/ Preview)
@@ -69,6 +70,11 @@ const styles = `
 .stepBox{border:1px solid var(--br);border-radius:10px}
 .bad{color:#b91c1c}
 .pdfPrev{width:100%;height:480px;border:1px solid var(--br);border-radius:10px}
+/* progress */
+.progressWrap{display:flex;flex-direction:column;gap:6px;width:100%}
+.progress{height:10px;background:#eef2ff;border:1px solid #dbeafe;border-radius:999px;overflow:hidden}
+.progress>span{display:block;height:100%;background:#3b82f6;width:0%}
+
 `;
 
 function useStyleTag(cssText) {
@@ -168,6 +174,15 @@ export default function HanziStrokeApp() {
 
   const [busyMsg, setBusyMsg] = useState('');
   const [error, setError] = useState('');
+
+  // Batch export (WebM or PDF)
+  const [batching, setBatching] = useState(false);
+  const [overallCount, setOverallCount] = useState({ i: 0, n: 0 }); // tiến độ tổng
+  const [convPct, setConvPct] = useState(0); // % convert file hiện tại
+  const [batchMsg, setBatchMsg] = useState(''); // mô tả bước hiện tại
+  const ffmpegReady = useRef(false); // đã load ffmpeg?
+  const ffmpegRef = useRef(null); // giữ instance ffmpeg để tái dùng
+  const [zipPct, setZipPct] = useState(0); // % đóng gói zip
 
   // Derived padding (no UI), keeps character centered relative to box
   const basePadding = useMemo(() => Math.round(size * 0.05), [size]);
@@ -937,6 +952,289 @@ export default function HanziStrokeApp() {
     }
   };
 
+  //
+  // Ưu tiên MP4 nếu MediaRecorder hỗ trợ (Safari thường OK)
+  function pickMp4Mime() {
+    const prefs = ['video/mp4;codecs=h264', 'video/mp4'];
+    for (const t of prefs)
+      if (window.MediaRecorder?.isTypeSupported(t)) return t;
+    return null;
+  }
+
+  // Ghi 1 ký tự -> Blob video (mp4 nếu hỗ trợ, không thì webm)
+  async function recordCharToVideoBlob(ch) {
+    const outDim = Math.round(size * exportMult);
+
+    // writer hi-res dùng canvas
+    const mnt = hiddenMountRef.current;
+    mnt.innerHTML = '';
+    const writer = HanziWriter.create(mnt, ch, {
+      width: outDim,
+      height: outDim,
+      padding: Math.round(basePadding * exportMult),
+      showOutline,
+      showCharacter: showChar,
+      strokeAnimationSpeed: speed,
+      delayBetweenStrokes,
+      strokeColor,
+      radicalColor,
+      renderer: 'canvas',
+      charDataLoader: (c, done) => loadCharData(c).then(done),
+    });
+    const srcCanvas = mnt.querySelector('canvas');
+    if (!srcCanvas) throw new Error('NO_CANVAS');
+
+    // nền + lưới để thu
+    const comp = document.createElement('canvas');
+    comp.width = outDim;
+    comp.height = outDim;
+    const ctx = comp.getContext('2d');
+    const stream = comp.captureStream(exportFps);
+
+    const mp4Mime = pickMp4Mime();
+    const mime =
+      mp4Mime ||
+      (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : 'video/webm');
+    const rec = new MediaRecorder(stream, {
+      mimeType: mime,
+      videoBitsPerSecond:
+        Math.max(2000, Math.min(50000, exportBitrateKbps)) * 1000,
+    });
+
+    const chunks = [];
+    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    const stopped = new Promise(res => (rec.onstop = res));
+
+    let recording = true;
+    const drawLoop = () => {
+      if (!recording) return;
+      ctx.clearRect(0, 0, outDim, outDim);
+      drawGridOnCtx(ctx, outDim, '#fff');
+      ctx.drawImage(srcCanvas, 0, 0, outDim, outDim);
+      requestAnimationFrame(drawLoop);
+    };
+
+    rec.start();
+    requestAnimationFrame(drawLoop);
+    await writer.animateCharacter();
+    setTimeout(() => {
+      recording = false;
+      rec.stop();
+    }, 120);
+    await stopped;
+
+    return {
+      blob: new Blob(chunks, { type: mime }),
+      mime,
+      filenameBase: `hanzi-${ch}-${outDim}px-${exportFps}fps`,
+    };
+  }
+
+  // WebM -> MP4 bằng ffmpeg.wasm (có progress)
+  async function ensureFFmpegLoaded() {
+    if (ffmpegReady.current) return ffmpegRef.current;
+    const { FFmpeg } = await import('@ffmpeg/ffmpeg');
+    const { toBlobURL } = await import('@ffmpeg/util');
+    // Load core từ CDN, tránh lỗi SharedArrayBuffer trên dev
+    const base = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+    const ffmpeg = new FFmpeg();
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
+      workerURL: await toBlobURL(
+        `${base}/ffmpeg-core.worker.js`,
+        'text/javascript',
+      ),
+    });
+    ffmpegRef.current = ffmpeg;
+    ffmpegReady.current = true;
+    return ffmpeg;
+  }
+
+  async function convertToMp4WithFFmpeg(webmBlob, onProgress) {
+    const ffmpeg = await ensureFFmpegLoaded();
+    const { fetchFile } = await import('@ffmpeg/util');
+
+    ffmpeg.on('progress', p => {
+      if (typeof onProgress === 'function' && p?.progress != null) {
+        onProgress(Math.round(p.progress * 100));
+      }
+    });
+
+    await ffmpeg.writeFile('in.webm', await fetchFile(webmBlob));
+    await ffmpeg.exec([
+      '-i',
+      'in.webm',
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-movflags',
+      '+faststart',
+      '-r',
+      String(exportFps),
+      'out.mp4',
+    ]);
+    const data = await ffmpeg.readFile('out.mp4');
+    return new Blob([data.buffer], { type: 'video/mp4' });
+  }
+
+  const batchExportMP4 = async () => {
+    const list = chars.slice(0); // theo thứ tự nhập, đã unique
+    if (!list.length) return;
+
+    setBatching(true);
+    setOverallCount({ i: 0, n: list.length });
+    setConvPct(0);
+    setBatchMsg('Khởi động…');
+
+    try {
+      const mp4Mime = pickMp4Mime();
+
+      for (let i = 0; i < list.length; i++) {
+        const ch = list[i];
+        setOverallCount({ i, n: list.length });
+        setBatchMsg(`Đang vẽ & ghi: "${ch}"`);
+        setConvPct(0);
+
+        // eslint-disable-next-line no-unused-vars
+        const { blob, mime, filenameBase } = await recordCharToVideoBlob(ch);
+
+        let outBlob = blob;
+        let outName = `${filenameBase}.mp4`;
+
+        if (!mp4Mime) {
+          setBatchMsg(`Chuyển sang MP4: "${ch}"`);
+          outBlob = await convertToMp4WithFFmpeg(blob, pct => setConvPct(pct));
+        } else {
+          setConvPct(100);
+        }
+
+        const url = URL.createObjectURL(outBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = outName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      setBatchMsg('Hoàn tất!');
+      setOverallCount({ i: list.length, n: list.length });
+      setConvPct(100);
+    } catch (e) {
+      console.error(e);
+      alert(
+        'Xuất loạt thất bại. Hãy giảm độ phân giải/FPS/ký tự, hoặc thử lại.',
+      );
+    } finally {
+      setTimeout(() => {
+        setBatching(false);
+        setBatchMsg('');
+        setConvPct(0);
+      }, 1200);
+    }
+  };
+
+  const batchExportMP4Zip = async () => {
+    const list = chars.slice(0);
+    if (!list.length) return;
+
+    setBatching(true);
+    setOverallCount({ i: 0, n: list.length });
+    setConvPct(0);
+    setZipPct(0);
+    setBatchMsg('Chuẩn bị…');
+
+    try {
+      const mp4Mime = pickMp4Mime();
+      const files = [];
+
+      // Số chữ số để zero-pad: 2 cho <100, 3 cho >=100, v.v.
+      const digits = Math.max(2, String(list.length).length);
+
+      for (let i = 0; i < list.length; i++) {
+        const ch = list[i];
+        setOverallCount({ i, n: list.length });
+        setBatchMsg(`Đang vẽ & ghi: "${ch}"`);
+        setConvPct(0);
+
+        // 1) Ghi video cho ký tự
+        // eslint-disable-next-line no-unused-vars
+        const { blob, mime, filenameBase } = await recordCharToVideoBlob(ch);
+
+        // 2) Đảm bảo là MP4 (nếu máy không ghi mp4 trực tiếp thì convert webm->mp4)
+        let outBlob = blob;
+        if (!mp4Mime) {
+          setBatchMsg(`Chuyển MP4: "${ch}"`);
+          outBlob = await convertToMp4WithFFmpeg(blob, pct => setConvPct(pct));
+        } else {
+          setConvPct(100);
+        }
+
+        // 3) Gom file (đặt tên có thứ tự + an toàn)
+        const base = (filenameBase ?? String(ch)).replace(/[\\/:*?"<>|]/g, '');
+        const idx = String(i + 1).padStart(digits, '0'); // 01_, 02_, ...
+        files.push({ name: `${idx}_${base}.mp4`, blob: outBlob });
+
+        // (tuỳ) dọn fs ffmpeg giữa mỗi vòng để tiết kiệm bộ nhớ
+        try {
+          const ffmpeg = ffmpegRef.current;
+          if (ffmpeg && ffmpegReady.current) {
+            await ffmpeg.deleteFile?.('in.webm');
+            await ffmpeg.deleteFile?.('out.mp4');
+          }
+        } catch {
+          /* noop */
+        }
+      }
+
+      // 4) Đóng gói ZIP
+      setBatchMsg('Đóng gói ZIP…');
+      setConvPct(0); // thanh giữa để trống, dùng thanh ZIP riêng
+      setZipPct(0);
+
+      const zip = new JSZip();
+      for (const f of files) zip.file(f.name, f.blob);
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' }, meta => {
+        const p = Math.max(0, Math.min(100, Math.round(meta.percent)));
+        setZipPct(p);
+        setBatchMsg(`Đóng gói ZIP… ${p}%`);
+      });
+
+      // 5) Tải ZIP
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `hanzi-mp4-${ts}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      setBatchMsg('Hoàn tất ZIP!');
+      setOverallCount({ i: list.length, n: list.length });
+      setZipPct(100);
+    } catch (e) {
+      console.error(e);
+      alert(
+        'Xuất ZIP thất bại. Hãy giảm độ phân giải/FPS/số lượng, rồi thử lại.',
+      );
+    } finally {
+      setTimeout(() => {
+        setBatching(false);
+        setBatchMsg('');
+        setConvPct(0);
+        setZipPct(0);
+      }, 1200);
+    }
+  };
+
   useEffect(
     () => () => {
       if (pdfUrl) URL.revokeObjectURL(pdfUrl);
@@ -947,18 +1245,22 @@ export default function HanziStrokeApp() {
   return (
     <div className="app">
       <div className="wrap">
-        <h1 className="h1" style={{
-          marginBottom: 20, fontSize: '2.6rem',
-          background: 'linear-gradient(90deg, #ff8a00, #e52e71)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          fontWeight: 'bold',
-          textAlign: 'center',
-          textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          userSelect: 'none',
-          letterSpacing: '0.05em',
-          marginTop: '12px'
-        }}>
+        <h1
+          className="h1"
+          style={{
+            marginBottom: 20,
+            fontSize: '2.6rem',
+            background: 'linear-gradient(90deg, #ff8a00, #e52e71)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            userSelect: 'none',
+            letterSpacing: '0.05em',
+            marginTop: '12px',
+          }}
+        >
           Tra cứu thứ tự nét chữ Hán
         </h1>
 
@@ -1146,7 +1448,47 @@ export default function HanziStrokeApp() {
               <button className="btn" onClick={exportWebM}>
                 Tải WebM
               </button>
+              <button
+                className="btn secondary"
+                onClick={batchExportMP4}
+                disabled={batching || !chars.length}
+              >
+                Tải loạt MP4 ({chars.length})
+              </button>
+              <button
+                className="btn secondary"
+                onClick={batchExportMP4Zip}
+                disabled={batching || !chars.length}
+              >
+                Tải ZIP (MP4, {chars.length})
+              </button>
             </div>
+            {batching && (
+              <div className="progressWrap" style={{ marginTop: 8 }}>
+                <div className="muted">
+                  {batchMsg} — {overallCount.i + 1}/{overallCount.n}
+                </div>
+                {/* tổng số ký tự */}
+                <div className="progress">
+                  <span
+                    style={{
+                      width: `${Math.round(
+                        (overallCount.i / Math.max(1, overallCount.n)) * 100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+                {/* tiến độ convert file hiện tại */}
+                <div className="progress">
+                  <span style={{ width: `${convPct}%` }} />
+                </div>
+
+                {/* Tiến độ đóng gói ZIP */}
+                <div className="progress">
+                  <span style={{ width: `${zipPct}%` }} />
+                </div>
+              </div>
+            )}
             <div className="muted">
               Xuất hiện tại kích thước ~{outDimDisplay}px, {exportFps}fps,{' '}
               {exportBitrateKbps}kbps.

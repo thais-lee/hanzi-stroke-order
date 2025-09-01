@@ -15,6 +15,7 @@
     "gif.js.optimized": "^1.0.1",
     "hanzi-writer": "^3.7.2",
     "hanzi-writer-data": "^2.0.1",
+    "jszip": "^3.10.1",
     "pdf-lib": "^1.17.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
