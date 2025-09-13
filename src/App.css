@@ -43,3 +43,8 @@
 .read-the-docs {
   color: #888;
 }
+
+.stageBox{ width:min(100%, 520px); margin-inline:auto; }
+.stageSquare{ position:relative; width:100%; aspect-ratio:1/1; }
+.stageGrid{ position:absolute; inset:0; width:100%; height:100%; display:block; pointer-events:none; }
+.writerLayer{ position:absolute; inset:0; }
