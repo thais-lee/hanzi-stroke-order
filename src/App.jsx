@@ -283,7 +283,7 @@ export default function App() {
               onChange={e => setCharSource(e.target.value)}
             >
               <option value="manual">Nhập trực tiếp</option>
-              <option value="list">Có sẵn</option>
+              <option value="list">Hán Tự Nhập Môn</option>
             </select>
           </div>
 
