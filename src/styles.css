@@ -338,3 +338,47 @@ input[type="text"].input {
 .input[type="color"]::-moz-color-swatch {
     border: none;
 }
+
+/* Modal */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    z-index: 60;
+}
+
+.modalCard {
+    background: #fff;
+    color: #111;
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .18);
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+}
+
+.modalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid #eef2f7;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+}
+
+.modalTitle {
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.modalBody {
+    padding: 12px 14px 16px 14px;
+}

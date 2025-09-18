@@ -33,6 +33,8 @@ export default function Controls(props) {
     busyMsg,
     error,
     outDimDisplay,
+    gridEnabled,
+    setGridEnabled,
   } = props;
 
   return (
@@ -176,8 +178,20 @@ export default function Controls(props) {
           onChange={e => setDelayBetweenStrokes(parseInt(e.target.value) || 0)}
         />
       </div>
+      <div className="row">
+        <label>Lưới căn nét</label>
+        <label>
+          <input
+            className="checkbox"
+            type="checkbox"
+            checked={gridEnabled}
+            onChange={e => setGridEnabled(e.target.checked)}
+          />{' '}
+          Hiện lưới (áp dụng cho animation, video, PDF)
+        </label>
+      </div>
 
-      <details className="advanced" about='Cài đặt nâng cao'>
+      <details className="advanced" about="Cài đặt nâng cao">
         <div className="row">
           <label>Renderer</label>
           <select

@@ -1,11 +1,15 @@
+// src/App.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './styles.css';
 
-import Controls from './components/Controls';
 import Stage from './components/Stage';
 import StepsGrid from './components/StepsGrid';
 import PDFPanel from './components/PDFPanel';
 import ProgressBars from './components/ProgressBars';
+import SettingsModal from './components/SettingsModal';
+
+import { GRID_DEFAULTS } from './utils/misc';
+import { loadCharCategories } from './utils/charLists';
 
 import {
   batchExportMP4Zip,
@@ -14,16 +18,54 @@ import {
 } from './utils/videoExport';
 
 export default function App() {
-  // ===== Controls =====
+  // ===== Nguồn ký tự =====
+  const [charSource, setCharSource] = useState('manual'); // 'manual' | 'list'
+
+  // --- Nhập tay ---
   const [inputStr, setInputStr] = useState('佛法僧');
-  const chars = useMemo(() => {
+  const manualChars = useMemo(() => {
     const filtered = Array.from(inputStr || '').filter(ch => ch.trim());
     const unique = [];
     for (const ch of filtered) if (!unique.includes(ch)) unique.push(ch);
     return unique.slice(0, 32);
   }, [inputStr]);
+
+  // --- Từ các file .txt trong src/data ---
+  const categories = useMemo(() => loadCharCategories(), []);
+  const [selectedCatId, setSelectedCatId] = useState('');
+
+  // gán nhóm đầu tiên khi categories sẵn sàng
+  useEffect(() => {
+    if (!selectedCatId && categories.length) {
+      setSelectedCatId(categories[0].id);
+    }
+  }, [categories, selectedCatId]);
+
+  const currentCat = useMemo(
+    () => categories.find(c => c.id === selectedCatId),
+    [categories, selectedCatId],
+  );
+
+  const fileChars = useMemo(() => currentCat?.chars || [], [currentCat]);
+
+  // Mảng ký tự dùng chung cho toàn app
+  const chars = useMemo(
+    () => (charSource === 'manual' ? manualChars : fileChars),
+    [charSource, manualChars, fileChars],
+  );
+
+  // Ký tự đang hiển thị/animate
   const [selected, setSelected] = useState('佛');
 
+  // Bảo đảm selected hợp lệ khi đổi nguồn / nhóm / input
+  useEffect(() => {
+    if (chars.length && !chars.includes(selected)) {
+      setSelected(chars[0]);
+    }
+    if (!chars.length && selected) setSelected('');
+  }, [chars, selected]);
+
+  // ===== Tuỳ chọn hiển thị/xuất =====
   const [size, setSize] = useState(420);
   const [strokeColor, setStrokeColor] = useState('#111111');
   const [radicalColor, setRadicalColor] = useState('#168F16');
@@ -32,23 +74,26 @@ export default function App() {
   const [speed, setSpeed] = useState(0.2);
   const [delayBetweenStrokes, setDelayBetweenStrokes] = useState(0);
   const [renderer, setRenderer] = useState('svg');
+  const [gridEnabled, setGridEnabled] = useState(true);
 
-  // export
+  // Export
   const [exportMult, setExportMult] = useState(3);
   const [exportFps, setExportFps] = useState(30);
   const [exportBitrateKbps, setExportBitrateKbps] = useState(12000);
 
   const [busyMsg, setBusyMsg] = useState('');
-  const [error] = useState('');
 
-  // batching
+  // Modal nâng cao
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Batch ZIP
   const [batching, setBatching] = useState(false);
   const [overallCount, setOverallCount] = useState({ i: 0, n: 0 });
   const [convPct, setConvPct] = useState(0);
   const [batchMsg, setBatchMsg] = useState('');
   const [zipPct, setZipPct] = useState(0);
 
-  // pdf
+  // ===== PDF =====
   const [pdfUrl, setPdfUrl] = useState('');
   const [pdfWarn, setPdfWarn] = useState('');
   const [pdfInfo, setPdfInfo] = useState('');
@@ -63,7 +108,7 @@ export default function App() {
   const [pdfSourceMode, setPdfSourceMode] = useState('selected');
   const [cjkFontBytes, setCjkFontBytes] = useState(null);
 
-  // load optional CJK font
+  // Nạp optional CJK font cho PDF footer
   useEffect(() => {
     (async () => {
       const candidates = [
@@ -80,25 +125,20 @@ export default function App() {
             return;
           }
         } catch {
-          // ignore
+          /* noop */
         }
       }
     })();
   }, []);
 
-  // keep selected valid
-  useEffect(() => {
-    if (chars.length && !chars.includes(selected)) setSelected(chars[0] || '');
-  }, [chars, selected]);
-
-  // derived
+  // Derived
   const basePadding = useMemo(() => Math.round(size * 0.05), [size]);
-  const outDimDisplay = Math.round(size * exportMult);
+  // const outDimDisplay = Math.round(size * exportMult);
 
-  // hidden mount for exports
+  // Hidden mount cho recording
   const hiddenMountRef = useRef(null);
 
-  // Single export MP4 (vẫn dùng util record + convert nếu cần)
+  // ===== Export MP4 1 ký tự =====
   const exportMP4 = async () => {
     if (!selected) return;
     setBusyMsg('Đang ghi video…');
@@ -115,6 +155,8 @@ export default function App() {
         radicalColor,
         exportFps,
         exportBitrateKbps,
+        gridEnabled,
+        gridOpts: GRID_DEFAULTS,
       });
 
       let blob = result.blob;
@@ -139,7 +181,7 @@ export default function App() {
     }
   };
 
-  // Batch ZIP
+  // ===== Batch ZIP =====
   const exportZip = async () => {
     const list = chars.slice(0);
     if (!list.length) return;
@@ -166,6 +208,8 @@ export default function App() {
           radicalColor,
           exportFps,
           exportBitrateKbps,
+          gridEnabled,
+          gridOpts: GRID_DEFAULTS,
         },
         {
           onItem: ({ index, total, label, convert }) => {
@@ -212,7 +256,7 @@ export default function App() {
         <h1
           className="h1"
           style={{
-            marginBottom: 20,
+            marginBottom: 16,
             fontSize: '2.6rem',
             background: 'linear-gradient(90deg, #ff8a00, #e52e71)',
             WebkitBackgroundClip: 'text',
@@ -228,41 +272,220 @@ export default function App() {
           Tra cứu thứ tự nét chữ Hán
         </h1>
 
-        <Controls
-          {...{
+        {/* ===== Hàng chọn nguồn + nhập/chọn ký tự ===== */}
+        <div className="section">
+          {/* Nguồn ký tự */}
+          <div className="row">
+            <label>Nguồn ký tự</label>
+            <select
+              className="select"
+              value={charSource}
+              onChange={e => setCharSource(e.target.value)}
+            >
+              <option value="manual">Nhập trực tiếp</option>
+              <option value="list">Có sẵn</option>
+            </select>
+          </div>
+
+          {/* Cùng hàng: input + dropdown nhóm file */}
+          <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+            <label>Ký tự</label>
+            <input
+              className="input"
+              style={{
+                flex: 1,
+                borderWidth: charSource !== 'manual' ? 1 : 2,
+                borderColor: charSource !== 'manual' ? '#ccc' : '#888',
+              }}
+              value={inputStr}
+              onChange={e => setInputStr(e.target.value)}
+              placeholder="Nhập nhiều ký tự (ví dụ: 佛法僧)"
+              disabled={charSource === 'list'}
+            />
+            <select
+              className="select"
+              value={selectedCatId}
+              onChange={e => setSelectedCatId(e.target.value)}
+              style={{
+                width: 240,
+                borderWidth: charSource !== 'list' ? 1 : 2,
+                borderColor: charSource !== 'list' ? '#ccc' : '#888',
+              }}
+              disabled={!categories.length || charSource !== 'list'}
+            >
+              {categories.map(g => (
+                <option key={g.id} value={g.id}>
+                  {g.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Nếu nhập tay → chips; nếu từ file → dropdown ký tự */}
+          {charSource === 'manual' ? (
+            !!manualChars.length && (
+              <div className="row" style={{ alignItems: 'flex-start' }}>
+                <label>Chọn ký tự</label>
+                <div className="chips">
+                  {manualChars.map(ch => (
+                    <button
+                      key={ch}
+                      className={'chip' + (selected === ch ? ' active' : '')}
+                      onClick={() => setSelected(ch)}
+                    >
+                      {ch}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="row">
+              <label>Ký tự trong nhóm</label>
+              <select
+                className="select"
+                value={selected}
+                onChange={e => setSelected(e.target.value)}
+              >
+                {(currentCat?.items || []).map((it, idx) => (
+                  <option key={`${it.value}-${idx}`} value={it.value}>
+                    {it.label}
+                  </option>
+                ))}
+              </select>
+              <span className="muted">({fileChars.length} ký tự)</span>
+            </div>
+          )}
+
+          {/* Công tắc lưới nhanh */}
+          <div className="row">
+            <label>Hiện lưới</label>
+            <input
+              type="checkbox"
+              checked={gridEnabled}
+              onChange={e => setGridEnabled(e.target.checked)}
+            />
+          </div>
+        </div>
+
+        {/* Nút mở modal nâng cao */}
+        <div
+          className="section"
+          style={{
+            display: 'flex',
+            gap: 8,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <button className="btn" onClick={() => setSettingsOpen(true)}>
+            ⚙️ Cài đặt nâng cao
+          </button>
+          <div className="muted">Ký tự hiện có: {chars.length}</div>
+        </div>
+
+        {/* Modal (các tuỳ chọn chi tiết) */}
+        <SettingsModal
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          inputStr={inputStr}
+          setInputStr={setInputStr}
+          chars={chars}
+          selected={selected}
+          setSelected={setSelected}
+          size={size}
+          setSize={setSize}
+          strokeColor={strokeColor}
+          setStrokeColor={setStrokeColor}
+          radicalColor={radicalColor}
+          setRadicalColor={setRadicalColor}
+          showOutline={showOutline}
+          setShowOutline={setShowOutline}
+          showChar={showChar}
+          setShowChar={setShowChar}
+          speed={speed}
+          setSpeed={setSpeed}
+          delayBetweenStrokes={delayBetweenStrokes}
+          setDelayBetweenStrokes={setDelayBetweenStrokes}
+          renderer={renderer}
+          setRenderer={setRenderer}
+          gridEnabled={gridEnabled}
+          setGridEnabled={setGridEnabled}
+          exportMult={exportMult}
+          setExportMult={setExportMult}
+          exportFps={exportFps}
+          setExportFps={setExportFps}
+          exportBitrateKbps={exportBitrateKbps}
+          setExportBitrateKbps={setExportBitrateKbps}
+          pdfPageSize={pdfPageSize}
+          setPdfPageSize={setPdfPageSize}
+          pdfOrientation={pdfOrientation}
+          setPdfOrientation={setPdfOrientation}
+          pdfCols={pdfCols}
+          setPdfCols={setPdfCols}
+          pdfMarginMm={pdfMarginMm}
+          setPdfMarginMm={setPdfMarginMm}
+          pdfIncludeDiagonals={pdfIncludeDiagonals}
+          setPdfIncludeDiagonals={setPdfIncludeDiagonals}
+          pdfShowFaint={pdfShowFaint}
+          setPdfShowFaint={setPdfShowFaint}
+          pdfFaintAlpha={pdfFaintAlpha}
+          setPdfFaintAlpha={setPdfFaintAlpha}
+          pdfSourceMode={pdfSourceMode}
+          setPdfSourceMode={setPdfSourceMode}
+          pdfTitle={pdfTitle}
+          setPdfTitle={setPdfTitle}
+          value={{
             inputStr,
-            setInputStr,
-            chars,
-            selected,
-            setSelected,
             size,
-            setSize,
             strokeColor,
-            setStrokeColor,
             radicalColor,
-            setRadicalColor,
             showOutline,
-            setShowOutline,
             showChar,
-            setShowChar,
             speed,
-            setSpeed,
             delayBetweenStrokes,
-            setDelayBetweenStrokes,
             renderer,
-            setRenderer,
             exportMult,
-            setExportMult,
             exportFps,
-            setExportFps,
             exportBitrateKbps,
-            setExportBitrateKbps,
-            busyMsg,
-            error,
-            outDimDisplay,
+            gridEnabled,
+            pdfPageSize,
+            pdfOrientation,
+            pdfCols,
+            pdfMarginMm,
+            pdfIncludeDiagonals,
+            pdfShowFaint,
+            pdfFaintAlpha,
+            pdfSourceMode,
+            pdfTitle,
+          }}
+          onApply={v => {
+            setInputStr(v.inputStr);
+            setSize(v.size);
+            setStrokeColor(v.strokeColor);
+            setRadicalColor(v.radicalColor);
+            setShowOutline(v.showOutline);
+            setShowChar(v.showChar);
+            setSpeed(v.speed);
+            setDelayBetweenStrokes(v.delayBetweenStrokes);
+            setRenderer(v.renderer);
+            setExportMult(v.exportMult);
+            setExportFps(v.exportFps);
+            setExportBitrateKbps(v.exportBitrateKbps);
+            setGridEnabled(v.gridEnabled);
+            setPdfPageSize(v.pdfPageSize);
+            setPdfOrientation(v.pdfOrientation);
+            setPdfCols(v.pdfCols);
+            setPdfMarginMm(v.pdfMarginMm);
+            setPdfIncludeDiagonals(v.pdfIncludeDiagonals);
+            setPdfShowFaint(v.pdfShowFaint);
+            setPdfFaintAlpha(v.pdfFaintAlpha);
+            setPdfSourceMode(v.pdfSourceMode);
+            setPdfTitle(v.pdfTitle);
           }}
         />
 
+        {/* Sân khấu animation */}
         <Stage
           selected={selected}
           size={size}
@@ -274,6 +497,8 @@ export default function App() {
           strokeColor={strokeColor}
           radicalColor={radicalColor}
           renderer={renderer}
+          showGrid={gridEnabled}
+          busyMsg={busyMsg}
           buttonsRight={
             <>
               <button className="btn" onClick={exportMP4}>
@@ -331,9 +556,10 @@ export default function App() {
           setPdfWarn={setPdfWarn}
           pdfInfo={pdfInfo}
           setPdfInfo={setPdfInfo}
+          gridEnabled={gridEnabled}
         />
 
-        {/* hidden mount for exports */}
+        {/* Hidden mount cho xuất video */}
         <div
           ref={hiddenMountRef}
           style={{ position: 'absolute', left: -99999, top: -99999 }}

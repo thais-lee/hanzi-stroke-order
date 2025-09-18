@@ -1,5 +1,6 @@
 import React from 'react';
 import { PAGE_SIZES, generatePracticePDF } from '../utils/pdfGen';
+import { GRID_DEFAULTS } from '../utils/misc';
 
 export default function PDFPanel({
   pdfPageSize,
@@ -30,6 +31,7 @@ export default function PDFPanel({
   setPdfWarn,
   pdfInfo,
   setPdfInfo,
+  gridEnabled,
 }) {
   const makePDF = async (download = false) => {
     try {
@@ -54,6 +56,8 @@ export default function PDFPanel({
         sourceMode: pdfSourceMode,
         title: pdfTitle,
         cjkFontBytes,
+        gridEnabled,
+        gridOpts: GRID_DEFAULTS
       });
 
       const url = URL.createObjectURL(blob);

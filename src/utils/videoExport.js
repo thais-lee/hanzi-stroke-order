@@ -1,6 +1,7 @@
+// utils/video.js
 import HanziWriter from 'hanzi-writer';
 import { loadCharData } from './hanzi';
-import { makeCompositeCanvas } from './misc';
+import { makeCompositeCanvas, drawGridOnCtx, CHAR_BOX_SCALE, GRID_DEFAULTS } from './misc';
 import { convertToMp4WithFFmpeg } from './ffmpeg';
 import JSZip from 'jszip';
 
@@ -11,12 +12,11 @@ export function pickMp4Mime() {
   return null;
 }
 
-// Ghi 1 ký tự -> Blob video (mp4 nếu support, không thì webm)
+// Ghi 1 ký tự -> Blob video (mp4 nếu support, ko thì webm)
 export async function recordCharToVideoBlob(ch, hiddenMountRef, cfg) {
   const {
     size,
     exportMult,
-    basePadding,
     showOutline,
     showChar,
     speed,
@@ -25,17 +25,20 @@ export async function recordCharToVideoBlob(ch, hiddenMountRef, cfg) {
     radicalColor,
     exportFps,
     exportBitrateKbps,
+    gridEnabled = true,
+    gridOpts = GRID_DEFAULTS,
   } = cfg;
 
   const outDim = Math.round(size * exportMult);
+  const pad = Math.round((outDim * (1 - CHAR_BOX_SCALE)) / 2);
 
-  // writer hi-res dùng canvas
+  // Writer hi-res dùng canvas
   const mnt = hiddenMountRef.current;
   mnt.innerHTML = '';
   const writer = HanziWriter.create(mnt, ch, {
     width: outDim,
     height: outDim,
-    padding: Math.round(basePadding * exportMult),
+    padding: pad,
     showOutline,
     showCharacter: showChar,
     strokeAnimationSpeed: speed,
@@ -49,6 +52,7 @@ export async function recordCharToVideoBlob(ch, hiddenMountRef, cfg) {
   const srcCanvas = mnt.querySelector('canvas');
   if (!srcCanvas) throw new Error('NO_CANVAS');
 
+  // Canvas tổng hợp để captureStream (ta sẽ tự vẽ nền + lưới + glyph)
   const { comp, ctx } = makeCompositeCanvas(srcCanvas, outDim);
   const stream = comp.captureStream(exportFps);
 
@@ -69,11 +73,29 @@ export async function recordCharToVideoBlob(ch, hiddenMountRef, cfg) {
   rec.ondataavailable = e => e.data.size && chunks.push(e.data);
   const stopped = new Promise(res => (rec.onstop = res));
 
+  // Vòng vẽ: NỀN TRẮNG + LƯỚI (mỗi frame) + glyph từ srcCanvas
   let recording = true;
+  //   const drawLoop = () => {
+  //     if (!recording) return;
+  //     drawGridOnCtx(ctx, outDim, {
+  //       bg: '#ffffff',
+  //       majorColor: '#BFCAE4', // đường chính (ô 3×3)
+  //       minorColor: '#D5DDEF', // đường con bên trong từng ô
+  //       borderColor: '#BFCAE4',
+  //       sameThickness: false, // đường con mảnh hơn
+  //       minorDash: [2, 6], // nét đứt như animation
+  //       borderRadius: 16, // nếu muốn bo viền giống Stage; 0 = vuông
+  //     });
+  //     ctx.drawImage(srcCanvas, 0, 0, outDim, outDim);
+  //     requestAnimationFrame(drawLoop);
+  //   };
   const drawLoop = () => {
     if (!recording) return;
-    ctx.clearRect(0, 0, outDim, outDim);
-    // nền + lưới + nét vẽ từ srcCanvas đã được HanziWriter cập nhật
+    // vẽ nền + lưới giống animation (hoặc chỉ nền nếu tắt lưới)
+    drawGridOnCtx(ctx, outDim, {
+      ...(gridOpts || GRID_DEFAULTS),
+      enabled: gridEnabled,
+    });
     ctx.drawImage(srcCanvas, 0, 0, outDim, outDim);
     requestAnimationFrame(drawLoop);
   };
@@ -96,7 +118,7 @@ export async function recordCharToVideoBlob(ch, hiddenMountRef, cfg) {
   };
 }
 
-// Xuất hàng loạt & ZIP (có thứ tự tên file)
+// Xuất hàng loạt & ZIP (tên có số thứ tự)
 export async function batchExportMP4Zip(chars, hiddenMountRef, cfg, progress) {
   const files = [];
   const digits = Math.max(2, String(chars.length).length);
