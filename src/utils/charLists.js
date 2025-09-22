@@ -82,6 +82,6 @@ export function loadCharCategories() {
   }
 
   // Sắp xếp theo tên nhóm (tùy thích)
-  out.sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+  // out.sort((a, b) => a.label.localeCompare(b.label, 'vi'));
   return out;
 }
