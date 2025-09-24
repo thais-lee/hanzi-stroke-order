@@ -17,6 +17,13 @@ import {
   pickMp4Mime,
 } from './utils/videoExport';
 
+// === NEW: PDF batch helpers
+import {
+  generatePracticePDFCombined,
+  generatePracticePDFZip,
+  saveBlob,
+} from './utils/pdfGen';
+
 export default function App() {
   // ===== Nguồn ký tự =====
   const [charSource, setCharSource] = useState('manual'); // 'manual' | 'list'
@@ -34,7 +41,6 @@ export default function App() {
   const categories = useMemo(() => loadCharCategories(), []);
   const [selectedCatId, setSelectedCatId] = useState('');
 
-  // gán nhóm đầu tiên khi categories sẵn sàng
   useEffect(() => {
     if (!selectedCatId && categories.length) {
       setSelectedCatId(categories[0].id);
@@ -57,11 +63,8 @@ export default function App() {
   // Ký tự đang hiển thị/animate
   const [selected, setSelected] = useState('佛');
 
-  // Bảo đảm selected hợp lệ khi đổi nguồn / nhóm / input
   useEffect(() => {
-    if (chars.length && !chars.includes(selected)) {
-      setSelected(chars[0]);
-    }
+    if (chars.length && !chars.includes(selected)) setSelected(chars[0]);
     if (!chars.length && selected) setSelected('');
   }, [chars, selected]);
 
@@ -86,7 +89,7 @@ export default function App() {
   // Modal nâng cao
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Batch ZIP
+  // Batch ZIP (video)
   const [batching, setBatching] = useState(false);
   const [overallCount, setOverallCount] = useState({ i: 0, n: 0 });
   const [convPct, setConvPct] = useState(0);
@@ -131,9 +134,7 @@ export default function App() {
     })();
   }, []);
 
-  // Derived
   const basePadding = useMemo(() => Math.round(size * 0.05), [size]);
-  // const outDimDisplay = Math.round(size * exportMult);
 
   // Hidden mount cho recording
   const hiddenMountRef = useRef(null);
@@ -181,11 +182,10 @@ export default function App() {
     }
   };
 
-  // ===== Batch ZIP =====
+  // ===== Batch ZIP (video) =====
   const exportZip = async () => {
     const list = chars.slice(0);
     if (!list.length) return;
-
     setBatching(true);
     setOverallCount({ i: 0, n: list.length });
     setConvPct(0);
@@ -246,6 +246,68 @@ export default function App() {
         setConvPct(0);
         setZipPct(0);
       }, 1200);
+    }
+  };
+
+  // ===== Helpers: build options cho PDF =====
+  const buildPdfOpts = () => ({
+    pageSize: pdfPageSize,
+    orientation: pdfOrientation,
+    cols: pdfCols,
+    marginMm: pdfMarginMm,
+    includeDiagonals: pdfIncludeDiagonals,
+    showFaint: pdfShowFaint,
+    faintAlpha: pdfFaintAlpha,
+    sourceMode: pdfSourceMode,
+    title: pdfTitle,
+    cjkFontBytes,
+    gridEnabled,
+    // phần hướng dẫn nét: 30pt + gap 6pt
+    guideStepSizePt: 30,
+    guideGapPt: 6,
+  });
+
+  // ===== NEW: Xuất PDF gộp (1 file, nhiều trang) =====
+  const exportBatchPdfCombined = async () => {
+    if (!chars.length) return;
+    setBusyMsg('Đang tạo PDF (gộp)…');
+    setBatchMsg('');
+    try {
+      const { blob, filename, skipped } = await generatePracticePDFCombined(
+        chars,
+        buildPdfOpts(),
+        (i, total, ch) => setBatchMsg(`PDF: ${i}/${total} – ${ch}`),
+      );
+      saveBlob(blob, filename);
+      if (skipped.length) setPdfWarn(`Bỏ qua: ${skipped.join(' ')}`);
+    } catch (e) {
+      console.error(e);
+      alert('Xuất PDF gộp thất bại.');
+    } finally {
+      setBusyMsg('');
+      setBatchMsg('');
+    }
+  };
+
+  // ===== NEW: Xuất ZIP nhiều PDF =====
+  const exportBatchPdfZip = async () => {
+    if (!chars.length) return;
+    setBusyMsg('Đang tạo ZIP (PDF)…');
+    setBatchMsg('');
+    try {
+      const { blob, filename, skipped } = await generatePracticePDFZip(
+        chars,
+        buildPdfOpts(),
+        (i, total, ch) => setBatchMsg(`PDF: ${i}/${total} – ${ch}`),
+      );
+      saveBlob(blob, filename);
+      if (skipped.length) setPdfWarn(`Bỏ qua: ${skipped.join(' ')}`);
+    } catch (e) {
+      console.error(e);
+      alert('Xuất ZIP PDF thất bại.');
+    } finally {
+      setBusyMsg('');
+      setBatchMsg('');
     }
   };
 
@@ -558,6 +620,27 @@ export default function App() {
           setPdfInfo={setPdfInfo}
           gridEnabled={gridEnabled}
         />
+
+        {/* ===== NEW: Nút tải PDF loạt chữ ===== */}
+        <div
+          className="section"
+          style={{ display: 'flex', gap: 8, justifyContent: 'center' }}
+        >
+          <button
+            className="btn"
+            onClick={exportBatchPdfCombined}
+            disabled={!chars.length}
+          >
+            📄 Tải PDF (gộp, {chars.length})
+          </button>
+          <button
+            className="btn secondary"
+            onClick={exportBatchPdfZip}
+            disabled={!chars.length}
+          >
+            🗜️ Tải ZIP (PDF, {chars.length})
+          </button>
+        </div>
 
         {/* Hidden mount cho xuất video */}
         <div

@@ -152,7 +152,7 @@ export async function generatePracticePDF(opts) {
     orientation = 'portrait',
     cols = 6,
     marginMm = 12,
-    includeDiagonals = false, // (tuỳ chọn)
+    includeDiagonals = false,
     showFaint = true,
     faintAlpha = 0.18,
     sourceMode = 'selected',
@@ -164,7 +164,7 @@ export async function generatePracticePDF(opts) {
     gridOpts = GRID_DEFAULTS,
 
     // === HƯỚNG DẪN (mới) ===
-    guideStepSizePt = 30, // ≈ 30px
+    guideStepSizePt = 30, // ~30px
     guideGapPt = 6, // khoảng cách giữa các bước
   } = opts;
 
@@ -173,7 +173,7 @@ export async function generatePracticePDF(opts) {
   const pageW = isPortrait ? baseW : baseH;
   const pageH = isPortrait ? baseH : baseW;
   const margin = mmToPt(marginMm);
-  const _cols = Math.max(2, Math.min(12, cols)); // vẫn dùng cho phần luyện
+  const _cols = Math.max(2, Math.min(12, cols));
   const usableW = pageW - margin * 2;
   const cell = Math.floor(usableW / _cols);
   if (cell < 24) throw new Error('CELL_TOO_SMALL');
@@ -240,7 +240,9 @@ export async function generatePracticePDF(opts) {
 
   // Lưới 3×3 + mỗi ô nhỏ chia 4×4
   const drawCellGrid = (x, y, size) => {
+    // viền ngoài
     drawRect(x, y, size, size, majorTh, borderColor);
+    // 3×3
     const t1x = x + size / 3,
       t2x = x + (2 * size) / 3;
     const t1y = y + size / 3,
@@ -249,10 +251,12 @@ export async function generatePracticePDF(opts) {
     drawLine(t2x, y, t2x, y + size, majorTh, majorColor);
     drawLine(x, t1y, x + size, t1y, majorTh, majorColor);
     drawLine(x, t2y, x + size, t2y, majorTh, majorColor);
+    // (tùy chọn) chéo
     if (includeDiagonals) {
       drawLine(x, y, x + size, y + size, minorTh, minorColor);
       drawLine(x + size, y, x, y + size, minorTh, minorColor);
     }
+    // 4×4 bên trong MỖI ô nhỏ 3×3
     const sub = size / 3;
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
@@ -286,10 +290,9 @@ export async function generatePracticePDF(opts) {
   const guideData = await loadCharData(guideChar);
   const strokeCount = guideData.strokes.length;
 
-  // render ảnh từng bước ở độ phân giải cao hơn rồi thu về 30pt để nét mịn
-  const pxGuide = 240; // nội suy mượt khi vẽ ở 30pt
+  // render ở độ phân giải cao rồi thu về 30pt để mịn
+  const pxGuide = 240;
   const padGuide = Math.max(0, Math.round((pxGuide * (1 - GLYPH_SCALE)) / 2));
-
   const stepImgs = [];
   for (let i = 0; i < strokeCount; i++) {
     const url = await makeGlyphStepPngDataUrl(guideChar, pxGuide, padGuide, i);
@@ -297,7 +300,7 @@ export async function generatePracticePDF(opts) {
     stepImgs.push(img);
   }
 
-  // xếp ngang liên tiếp, tự wrap theo chiều rộng trang
+  // xếp ngang liên tiếp, tự wrap
   const stepW = guideStepSizePt;
   const stepH = guideStepSizePt;
   const gap = Math.max(0, guideGapPt);
@@ -308,13 +311,12 @@ export async function generatePracticePDF(opts) {
   const guideRows = Math.ceil(strokeCount / perRow);
   const guideAreaH = guideRows * stepH + (guideRows - 1) * gap;
 
-  // vẽ
   for (let i = 0; i < strokeCount; i++) {
     const row = Math.floor(i / perRow);
     const col = i % perRow;
     const x = margin + col * (stepW + gap);
     const topY = pageH - margin - (row + 1) * stepH - row * gap;
-    const y = topY; // pdf-lib gốc trái-dưới; topY đã là đáy vùng bước cao stepH
+    const y = topY;
     page.drawImage(stepImgs[i], {
       x,
       y,
@@ -385,4 +387,126 @@ export async function generatePracticePDF(opts) {
     ? `Bỏ qua ký tự không có dữ liệu: ${invalid.join(' ')}`
     : '';
   return { blob, info, warn };
+}
+
+// ===== Tiện ích tải xuống Blob
+export function saveBlob(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    document.body.removeChild(a);
+  }, 1200);
+}
+
+/**
+ * GỘP NHIỀU CHỮ THÀNH 1 PDF (mỗi chữ 1 trang)
+ */
+export async function generatePracticePDFCombined(
+  charList,
+  baseOpts = {},
+  onProgress,
+) {
+  const merged = await PDFDocument.create();
+  const cleaned = (charList || []).map(ch => (ch || '').trim()).filter(Boolean);
+  const skipped = [];
+
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    onProgress?.(i + 1, cleaned.length, ch);
+    try {
+      const { blob } = await generatePracticePDF({
+        ...baseOpts,
+        selected: ch,
+        sourceMode: 'selected',
+      });
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const src = await PDFDocument.load(bytes);
+      const pages = await merged.copyPages(src, src.getPageIndices());
+      pages.forEach(p => merged.addPage(p));
+    } catch (e) {
+      console.warn('Skip char:', ch, e);
+      skipped.push(ch);
+    }
+  }
+
+  const mergedBytes = await merged.save();
+  const outBlob = new Blob([mergedBytes], { type: 'application/pdf' });
+  const name = `practice_${cleaned.join('') || 'batch'}.pdf`;
+  return { blob: outBlob, filename: name, skipped };
+}
+
+// Helper: tạo tên file Unicode an toàn
+function unicodeSafeNameFromChar(ch) {
+  let name = (ch || '').normalize('NFC');
+  // eslint-disable-next-line no-control-regex, no-useless-escape
+  name = name.replace(/[\/\\:*?"<>|\u0000-\u001F]/g, '').trim();
+  if (!name) name = `U+${ch.codePointAt(0).toString(16).toUpperCase()}`;
+  return name;
+}
+
+/**
+ * TẠO ZIP NHIỀU FILE PDF (mỗi chữ 1 file) – có số thứ tự
+ * Yêu cầu cài: npm i jszip
+ * @param {string[]} charList
+ * @param {object} baseOpts - options cho generatePracticePDF
+ * @param {(i:number, total:number, ch:string)=>void} onProgress
+ * @param {object} naming - (tùy chọn) cấu hình đánh số
+ *   { index: true, start: 1, padWidth: 'auto', sep: '_' }
+ */
+export async function generatePracticePDFZip(
+  charList,
+  baseOpts = {},
+  onProgress,
+  naming = {},
+) {
+  const JSZip = (await import('jszip')).default;
+  const zip = new JSZip();
+
+  const cleaned = (charList || []).map(ch => (ch || '').trim()).filter(Boolean);
+  const skipped = [];
+
+  // Cấu hình đánh số
+  const nameOpts = {
+    index: true, // bật đánh số
+    start: 1, // bắt đầu từ 1
+    padWidth: 'auto', // tự tính số chữ số (01, 002, …)
+    sep: '_', // phân cách số và chữ
+    ...naming,
+  };
+  const total = cleaned.length;
+  const width =
+    nameOpts.padWidth === 'auto'
+      ? String(nameOpts.start + total - 1).length
+      : Math.max(1, Number(nameOpts.padWidth) || 1);
+
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    onProgress?.(i + 1, total, ch);
+    try {
+      const { blob } = await generatePracticePDF({
+        ...baseOpts,
+        selected: ch,
+        sourceMode: 'selected',
+      });
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+
+      const baseName = unicodeSafeNameFromChar(ch);
+      const prefix = nameOpts.index
+        ? String(nameOpts.start + i).padStart(width, '0') + nameOpts.sep
+        : '';
+
+      zip.file(`${prefix}${baseName}.pdf`, bytes);
+    } catch (e) {
+      console.warn('Skip char:', ch, e);
+      skipped.push(ch);
+    }
+  }
+
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  const name = `practice_batch_${Date.now()}.zip`;
+  return { blob: zipBlob, filename: name, skipped };
 }
