@@ -16,7 +16,7 @@ export const GRID_DEFAULTS = {
   borderColor: '#BFCAE4',
   sameThickness: false, // lưới con mảnh hơn
   minorDash: [2, 6], // nét đứt cho lưới con (animation + video)
-  borderRadius: 16, // bo góc khung; 0 = viền vuông
+  borderRadius: 14, // bo góc khung; 0 = viền vuông
 };
 
 /**
@@ -46,7 +46,7 @@ export function drawGridOnCtx(
   const majorTh = scale;
   const minorTh = o.sameThickness
     ? majorTh
-    : Math.max(1, Math.floor(majorTh * 0.6));
+    : Math.max(1, Math.floor(majorTh * 0.9));
 
   // nền (phải vẽ kín để video không bị nền đen)
   ctx.save();

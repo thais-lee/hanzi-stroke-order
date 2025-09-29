@@ -102,16 +102,16 @@ export default function Stage({
             svg.appendChild(
               mkLine(x, y0, x, y0 + cell, {
                 stroke: GRID_DEFAULTS.minorColor,
-                width: 1,
-                dash: '2 6',
+                width: 2,
+                dash: '3 6',
               }),
             );
             const y = y0 + q * step;
             svg.appendChild(
               mkLine(x0, y, x0 + cell, y, {
                 stroke: GRID_DEFAULTS.minorColor,
-                width: 1,
-                dash: '2 6',
+                width: 2,
+                dash: '3 6',
               }),
             );
           }

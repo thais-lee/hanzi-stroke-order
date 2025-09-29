@@ -285,11 +285,11 @@ export default function SettingsModal({ open, onClose, value, onApply }) {
                 type="range"
                 className="input"
                 min={0.08}
-                max={0.5}
-                step={0.02}
+                max={1.00}
+                step={0.05}
                 value={v.pdfFaintAlpha}
                 onChange={e =>
-                  set({ pdfFaintAlpha: parseFloat(e.target.value) || 0.18 })
+                  set({ pdfFaintAlpha: parseFloat(e.target.value) || 0.2 })
                 }
               />
               <span className="muted">

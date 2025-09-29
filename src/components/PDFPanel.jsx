@@ -171,11 +171,11 @@ export default function PDFPanel({
         <input
           className="input"
           type="range"
-          min={0.08}
-          max={0.5}
-          step={0.02}
+          min={0.05}
+          max={1.00}
+          step={0.05}
           value={pdfFaintAlpha}
-          onChange={e => setPdfFaintAlpha(parseFloat(e.target.value) || 0.18)}
+          onChange={e => setPdfFaintAlpha(parseFloat(e.target.value) || 0.2)}
         />
         <span className="muted">{Math.round(pdfFaintAlpha * 100)}%</span>
       </div>

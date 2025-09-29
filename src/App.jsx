@@ -107,7 +107,7 @@ export default function App() {
   const [pdfMarginMm, setPdfMarginMm] = useState(12);
   const [pdfIncludeDiagonals, setPdfIncludeDiagonals] = useState(false);
   const [pdfShowFaint, setPdfShowFaint] = useState(true);
-  const [pdfFaintAlpha, setPdfFaintAlpha] = useState(0.18);
+  const [pdfFaintAlpha, setPdfFaintAlpha] = useState(0.2);
   const [pdfSourceMode, setPdfSourceMode] = useState('selected');
   const [cjkFontBytes, setCjkFontBytes] = useState(null);
 
