@@ -63,6 +63,8 @@ export default function PDFPanel({
         cjkFontBytes,
         gridEnabled,
         gridOpts: GRID_DEFAULTS,
+        gridMode: pdfGridMode,
+        subdividePerCell4x4: pdfSubdivide4x4,
       });
 
       const url = URL.createObjectURL(blob);
