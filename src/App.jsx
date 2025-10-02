@@ -110,6 +110,9 @@ export default function App() {
   const [pdfFaintAlpha, setPdfFaintAlpha] = useState(0.2);
   const [pdfSourceMode, setPdfSourceMode] = useState('selected');
   const [cjkFontBytes, setCjkFontBytes] = useState(null);
+  // NEW: kiểu lưới & chia 4×4
+  const [pdfGridMode, setPdfGridMode] = useState('3x3'); // '3x3' | '2x2' | 'mi' | 'zhong' | 'hui'
+  const [pdfSubdivide4x4, setPdfSubdivide4x4] = useState(true);
 
   // Nạp optional CJK font cho PDF footer
   useEffect(() => {
@@ -265,6 +268,8 @@ export default function App() {
     // phần hướng dẫn nét: 30pt + gap 6pt
     guideStepSizePt: 30,
     guideGapPt: 6,
+    gridMode: pdfGridMode, // '3x3' | '2x2' | 'mi' | 'zhong' | 'hui'
+    subdividePerCell4x4: pdfSubdivide4x4,
   });
 
   // ===== NEW: Xuất PDF gộp (1 file, nhiều trang) =====
@@ -428,6 +433,34 @@ export default function App() {
               onChange={e => setGridEnabled(e.target.checked)}
             />
           </div>
+
+          {/* NEW: Kiểu lưới */}
+          <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+            <label>Kiểu lưới</label>
+            <select
+              className="select"
+              value={pdfGridMode}
+              onChange={e => setPdfGridMode(e.target.value)}
+              style={{ width: 220 }}
+            >
+              <option value="3x3">九宫格 (3×3)</option>
+              <option value="2x2">田字格 (2×2)</option>
+              <option value="mi">米字格 (mễ tự cách)</option>
+              <option value="zhong">中宫格 (trung cung)</option>
+              <option value="hui">回宫格 (hồi cung)</option>
+            </select>
+
+            {(pdfGridMode === '3x3' || pdfGridMode === '2x2') && (
+              <>
+                <label style={{ marginLeft: 8 }}>Chia 4×4 trong ô con</label>
+                <input
+                  type="checkbox"
+                  checked={pdfSubdivide4x4}
+                  onChange={e => setPdfSubdivide4x4(e.target.checked)}
+                />
+              </>
+            )}
+          </div>
         </div>
 
         {/* Nút mở modal nâng cao */}
@@ -561,6 +594,9 @@ export default function App() {
           renderer={renderer}
           showGrid={gridEnabled}
           busyMsg={busyMsg}
+          gridMode={pdfGridMode}
+          subdividePerCell4x4={pdfSubdivide4x4}
+          includeDiagonals={pdfIncludeDiagonals}
           buttonsRight={
             <>
               <button className="btn" onClick={exportMP4}>
@@ -587,7 +623,14 @@ export default function App() {
           />
         )}
 
-        <StepsGrid selected={selected} strokeColor={strokeColor} />
+        <StepsGrid
+          selected={selected}
+          strokeColor={strokeColor}
+          gridEnabled={gridEnabled}
+          gridMode={pdfGridMode}
+          subdividePerCell4x4={false}
+          includeDiagonals={pdfIncludeDiagonals}
+        />
 
         <PDFPanel
           pdfPageSize={pdfPageSize}
@@ -619,6 +662,11 @@ export default function App() {
           pdfInfo={pdfInfo}
           setPdfInfo={setPdfInfo}
           gridEnabled={gridEnabled}
+          setGridEnabled={setGridEnabled}
+          pdfGridMode={pdfGridMode}
+          setPdfGridMode={setPdfGridMode}
+          pdfSubdivide4x4={pdfSubdivide4x4}
+          setPdfSubdivide4x4={setPdfSubdivide4x4}
         />
 
         {/* ===== NEW: Nút tải PDF loạt chữ ===== */}

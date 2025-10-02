@@ -32,6 +32,11 @@ export default function PDFPanel({
   pdfInfo,
   setPdfInfo,
   gridEnabled,
+  setGridEnabled,
+  pdfGridMode,
+  setPdfGridMode,
+  pdfSubdivide4x4,
+  setPdfSubdivide4x4,
 }) {
   const makePDF = async (download = false) => {
     try {
@@ -57,7 +62,7 @@ export default function PDFPanel({
         title: pdfTitle,
         cjkFontBytes,
         gridEnabled,
-        gridOpts: GRID_DEFAULTS
+        gridOpts: GRID_DEFAULTS,
       });
 
       const url = URL.createObjectURL(blob);
@@ -172,7 +177,7 @@ export default function PDFPanel({
           className="input"
           type="range"
           min={0.05}
-          max={1.00}
+          max={1.0}
           step={0.05}
           value={pdfFaintAlpha}
           onChange={e => setPdfFaintAlpha(parseFloat(e.target.value) || 0.2)}
@@ -247,6 +252,44 @@ export default function PDFPanel({
           <div className="muted">{pdfInfo}</div>
         </div>
       )}
+
+      {/* Công tắc lưới nhanh */}
+      <div className="row">
+        <label>Hiện lưới</label>
+        <input
+          type="checkbox"
+          checked={gridEnabled}
+          onChange={e => setGridEnabled(e.target.checked)}
+        />
+      </div>
+
+      {/* NEW: Kiểu lưới */}
+      <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+        <label>Kiểu lưới</label>
+        <select
+          className="select"
+          value={pdfGridMode}
+          onChange={e => setPdfGridMode(e.target.value)}
+          style={{ width: 220 }}
+        >
+          <option value="3x3">9 cung (3×3)</option>
+          <option value="2x2">田字格 (2×2)</option>
+          <option value="mi">米字格 (mễ tự cách)</option>
+          <option value="zhong">中宫格 (trung cung)</option>
+          <option value="hui">回宫格 (hồi cung)</option>
+        </select>
+
+        {(pdfGridMode === '3x3' || pdfGridMode === '2x2') && (
+          <>
+            <label style={{ marginLeft: 8 }}>Chia 4×4 trong ô con</label>
+            <input
+              type="checkbox"
+              checked={pdfSubdivide4x4}
+              onChange={e => setPdfSubdivide4x4(e.target.checked)}
+            />
+          </>
+        )}
+      </div>
 
       {pdfUrl && (
         <div

@@ -1,3 +1,5 @@
+/* eslint-disable no-useless-escape */
+/* eslint-disable no-control-regex */
 // utils/pdfGen.js
 import HanziWriter from 'hanzi-writer';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -76,7 +78,6 @@ async function makeGlyphPngDataUrl(char, px, paddingPx, alpha) {
   ctx.fillStyle = '#111';
   for (const d of data.strokes) ctx.fill(new Path2D(d));
   ctx.restore();
-
   return canvas.toDataURL('image/png');
 }
 
@@ -144,6 +145,147 @@ async function makeGlyphStepPngDataUrl(char, px, paddingPx, uptoStrokeIndex) {
   return canvas.toDataURL('image/png');
 }
 
+/** -----------------------
+ *  VẼ CÁC KIỂU LƯỚI
+ *  gridMode: '3x3' | '2x2' | 'mi' | 'zhong' | 'hui'
+ *  ----------------------*/
+function makeGridDrawer(page, colors, thicks, opts) {
+  const { majorColor, minorColor, borderColor } = colors;
+  const { majorTh, minorTh } = thicks;
+  const {
+    includeDiagonals,
+    gridMode,
+    subdividePerCell4x4,
+    zhongInnerRatio,
+    huiInnerMarginRatio,
+  } = opts;
+
+  const drawLine = (x1, y1, x2, y2, th, color) =>
+    page.drawLine({
+      start: { x: x1, y: y1 },
+      end: { x: x2, y: y2 },
+      thickness: th,
+      color,
+    });
+
+  const drawRect = (x, y, w, h, th, color) =>
+    page.drawRectangle({
+      x,
+      y,
+      width: w,
+      height: h,
+      borderWidth: th,
+      borderColor: color,
+      color: rgb(1, 1, 1),
+    });
+
+  const drawMinor4x4Within = (sx, sy, size) => {
+    const step = size / 4;
+    for (let q = 1; q <= 3; q++) {
+      drawLine(
+        sx + q * step,
+        sy,
+        sx + q * step,
+        sy + size,
+        minorTh,
+        minorColor,
+      );
+      drawLine(
+        sx,
+        sy + q * step,
+        sx + size,
+        sy + q * step,
+        minorTh,
+        minorColor,
+      );
+    }
+  };
+
+  const draw3x3 = (x, y, size) => {
+    drawRect(x, y, size, size, majorTh, borderColor);
+    const t1x = x + size / 3,
+      t2x = x + (2 * size) / 3;
+    const t1y = y + size / 3,
+      t2y = y + (2 * size) / 3;
+    drawLine(t1x, y, t1x, y + size, majorTh, majorColor);
+    drawLine(t2x, y, t2x, y + size, majorTh, majorColor);
+    drawLine(x, t1y, x + size, t1y, majorTh, majorColor);
+    drawLine(x, t2y, x + size, t2y, majorTh, majorColor);
+    if (includeDiagonals) {
+      drawLine(x, y, x + size, y + size, minorTh, minorColor);
+      drawLine(x + size, y, x, y + size, minorTh, minorColor);
+    }
+    if (subdividePerCell4x4) {
+      const sub = size / 3;
+      for (let i = 0; i < 3; i++)
+        for (let j = 0; j < 3; j++)
+          drawMinor4x4Within(x + i * sub, y + j * sub, sub);
+    }
+  };
+
+  const draw2x2 = (x, y, size) => {
+    drawRect(x, y, size, size, majorTh, borderColor);
+    const midx = x + size / 2,
+      midy = y + size / 2;
+    drawLine(midx, y, midx, y + size, majorTh, majorColor);
+    drawLine(x, midy, x + size, midy, majorTh, majorColor);
+    if (includeDiagonals) {
+      drawLine(x, y, x + size, y + size, minorTh, minorColor);
+      drawLine(x + size, y, x, y + size, minorTh, minorColor);
+    }
+    if (subdividePerCell4x4) {
+      const sub = size / 2;
+      for (let i = 0; i < 2; i++)
+        for (let j = 0; j < 2; j++)
+          drawMinor4x4Within(x + i * sub, y + j * sub, sub);
+    }
+  };
+
+  const drawMi = (x, y, size) => {
+    drawRect(x, y, size, size, majorTh, borderColor);
+    const midx = x + size / 2,
+      midy = y + size / 2;
+    drawLine(midx, y, midx, y + size, majorTh, majorColor); // dọc
+    drawLine(x, midy, x + size, midy, majorTh, majorColor); // ngang
+    drawLine(x, y, x + size, y + size, majorTh, majorColor); // chéo \
+    drawLine(x + size, y, x, y + size, majorTh, majorColor); // chéo /
+  };
+
+  const drawZhong = (x, y, size) => {
+    drawRect(x, y, size, size, majorTh, borderColor);
+    const midx = x + size / 2,
+      midy = y + size / 2;
+    drawLine(midx, y, midx, y + size, majorTh, majorColor);
+    drawLine(x, midy, x + size, midy, majorTh, majorColor);
+    const inner = size * Math.min(Math.max(zhongInnerRatio, 0.25), 0.8); // 0.25..0.8
+    const ix = x + (size - inner) / 2,
+      iy = y + (size - inner) / 2;
+    drawRect(ix, iy, inner, inner, minorTh, minorColor);
+  };
+
+  const drawHui = (x, y, size) => {
+    drawRect(x, y, size, size, majorTh, borderColor);
+    const m = size * Math.min(Math.max(huiInnerMarginRatio, 0.1), 0.3); // 0.1..0.3
+    drawRect(x + m, y + m, size - 2 * m, size - 2 * m, majorTh, majorColor);
+  };
+
+  return (x, y, size) => {
+    switch (gridMode) {
+      case '2x2':
+        return draw2x2(x, y, size);
+      case 'mi':
+        return drawMi(x, y, size);
+      case 'zhong':
+        return drawZhong(x, y, size);
+      case 'hui':
+        return drawHui(x, y, size);
+      case '3x3':
+      default:
+        return draw3x3(x, y, size);
+    }
+  };
+}
+
 export async function generatePracticePDF(opts) {
   const {
     selected,
@@ -152,20 +294,26 @@ export async function generatePracticePDF(opts) {
     orientation = 'portrait',
     cols = 6,
     marginMm = 12,
-    includeDiagonals = false,
+
+    // === LƯỚI ===
+    gridEnabled = true,
+    gridOpts = GRID_DEFAULTS, // vẫn giữ để tương thích
+    includeDiagonals = false, // tham số cũ
     showFaint = true,
     faintAlpha = 0.18,
     sourceMode = 'selected',
     title = 'Bảng luyện viết',
     cjkFontBytes = null,
 
-    // === LƯỚI ===
-    gridEnabled = true,
-    gridOpts = GRID_DEFAULTS,
-
-    // === HƯỚNG DẪN (mới) ===
+    // === HƯỚNG DẪN (thứ tự nét) ===
     guideStepSizePt = 30, // ~30px
     guideGapPt = 6, // khoảng cách giữa các bước
+
+    // === KIỂU LƯỚI MỚI ===
+    gridMode = '3x3', // '3x3' | '2x2' | 'mi' | 'zhong' | 'hui'
+    subdividePerCell4x4 = true, // áp dụng cho 3×3 & 2×2
+    zhongInnerRatio = 0.5, // cỡ ô trung cung (0.25..0.8)
+    huiInnerMarginRatio = 0.16, // lề vào cho khung trong (0.1..0.3)
   } = opts;
 
   const { w: baseW, h: baseH } = PAGE_SIZES[pageSize] || PAGE_SIZES.A4;
@@ -219,71 +367,19 @@ export async function generatePracticePDF(opts) {
     ? majorTh
     : Math.max(0.6, majorTh * 0.66);
 
-  const drawLine = (x1, y1, x2, y2, th, color) =>
-    page.drawLine({
-      start: { x: x1, y: y1 },
-      end: { x: x2, y: y2 },
-      thickness: th,
-      color,
-    });
-
-  const drawRect = (x, y, w, h, th, color) =>
-    page.drawRectangle({
-      x,
-      y,
-      width: w,
-      height: h,
-      borderWidth: th,
-      borderColor: color,
-      color: rgb(1, 1, 1),
-    });
-
-  // Lưới 3×3 + mỗi ô nhỏ chia 4×4
-  const drawCellGrid = (x, y, size) => {
-    // viền ngoài
-    drawRect(x, y, size, size, majorTh, borderColor);
-    // 3×3
-    const t1x = x + size / 3,
-      t2x = x + (2 * size) / 3;
-    const t1y = y + size / 3,
-      t2y = y + (2 * size) / 3;
-    drawLine(t1x, y, t1x, y + size, majorTh, majorColor);
-    drawLine(t2x, y, t2x, y + size, majorTh, majorColor);
-    drawLine(x, t1y, x + size, t1y, majorTh, majorColor);
-    drawLine(x, t2y, x + size, t2y, majorTh, majorColor);
-    // (tùy chọn) chéo
-    if (includeDiagonals) {
-      drawLine(x, y, x + size, y + size, minorTh, minorColor);
-      drawLine(x + size, y, x, y + size, minorTh, minorColor);
-    }
-    // 4×4 bên trong MỖI ô nhỏ 3×3
-    const sub = size / 3;
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        const sx = x + i * sub;
-        const sy = y + j * sub;
-        const step = sub / 4;
-        for (let q = 1; q <= 3; q++) {
-          drawLine(
-            sx + q * step,
-            sy,
-            sx + q * step,
-            sy + sub,
-            minorTh,
-            minorColor,
-          );
-          drawLine(
-            sx,
-            sy + q * step,
-            sx + sub,
-            sy + q * step,
-            minorTh,
-            minorColor,
-          );
-        }
-      }
-    }
-  };
+  // helper vẽ lưới theo kiểu đã chọn
+  const drawCellGrid = makeGridDrawer(
+    page,
+    { majorColor, minorColor, borderColor },
+    { majorTh, minorTh },
+    {
+      includeDiagonals,
+      gridMode,
+      subdividePerCell4x4,
+      zhongInnerRatio,
+      huiInnerMarginRatio,
+    },
+  );
 
   // ===== PHẦN 1: HƯỚNG DẪN – KHÔNG PHỤ THUỘC COLS =====
   const guideChar = validSeq[0];
@@ -381,12 +477,23 @@ export async function generatePracticePDF(opts) {
 
   const info =
     `${_cols} cột • ${gridRows} hàng luyện ` +
-    `(+ ${guideRows} hàng hướng dẫn, ${strokeCount} bước, size ${guideStepSizePt}pt) ` +
-    `• ô ~${Math.round(cell)}pt (${Math.round(cell * 0.3528)}mm)`;
+    `(+ ${guideRows} hàng hướng dẫn, ${strokeCount} bước) • lưới=${gridMode}` +
+    (subdividePerCell4x4 && (gridMode === '3x3' || gridMode === '2x2')
+      ? ' + 4×4/ô con'
+      : '') +
+    ` • ô ~${Math.round(cell)}pt (${Math.round(cell * 0.3528)}mm)`;
   const warn = invalid.length
     ? `Bỏ qua ký tự không có dữ liệu: ${invalid.join(' ')}`
     : '';
   return { blob, info, warn };
+}
+
+// ====== Helper đặt tên Unicode an toàn
+function unicodeSafeNameFromChar(ch) {
+  let name = (ch || '').normalize('NFC');
+  name = name.replace(/[\/\\:*?"<>|\u0000-\u001F]/g, '').trim();
+  if (!name) name = `U+${ch.codePointAt(0).toString(16).toUpperCase()}`;
+  return name;
 }
 
 // ===== Tiện ích tải xuống Blob
@@ -439,23 +546,10 @@ export async function generatePracticePDFCombined(
   return { blob: outBlob, filename: name, skipped };
 }
 
-// Helper: tạo tên file Unicode an toàn
-function unicodeSafeNameFromChar(ch) {
-  let name = (ch || '').normalize('NFC');
-  // eslint-disable-next-line no-control-regex, no-useless-escape
-  name = name.replace(/[\/\\:*?"<>|\u0000-\u001F]/g, '').trim();
-  if (!name) name = `U+${ch.codePointAt(0).toString(16).toUpperCase()}`;
-  return name;
-}
-
 /**
  * TẠO ZIP NHIỀU FILE PDF (mỗi chữ 1 file) – có số thứ tự
- * Yêu cầu cài: npm i jszip
- * @param {string[]} charList
- * @param {object} baseOpts - options cho generatePracticePDF
- * @param {(i:number, total:number, ch:string)=>void} onProgress
- * @param {object} naming - (tùy chọn) cấu hình đánh số
- *   { index: true, start: 1, padWidth: 'auto', sep: '_' }
+ * Yêu cầu: npm i jszip
+ * naming: { index:true, start:1, padWidth:'auto'|2|3..., sep:'_' }
  */
 export async function generatePracticePDFZip(
   charList,
@@ -469,12 +563,11 @@ export async function generatePracticePDFZip(
   const cleaned = (charList || []).map(ch => (ch || '').trim()).filter(Boolean);
   const skipped = [];
 
-  // Cấu hình đánh số
   const nameOpts = {
-    index: true, // bật đánh số
-    start: 1, // bắt đầu từ 1
-    padWidth: 'auto', // tự tính số chữ số (01, 002, …)
-    sep: '_', // phân cách số và chữ
+    index: true,
+    start: 1,
+    padWidth: 'auto',
+    sep: '_',
     ...naming,
   };
   const total = cleaned.length;
@@ -493,12 +586,10 @@ export async function generatePracticePDFZip(
         sourceMode: 'selected',
       });
       const bytes = new Uint8Array(await blob.arrayBuffer());
-
       const baseName = unicodeSafeNameFromChar(ch);
       const prefix = nameOpts.index
         ? String(nameOpts.start + i).padStart(width, '0') + nameOpts.sep
         : '';
-
       zip.file(`${prefix}${baseName}.pdf`, bytes);
     } catch (e) {
       console.warn('Skip char:', ch, e);
