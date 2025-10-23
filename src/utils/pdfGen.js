@@ -359,13 +359,14 @@ export async function generatePracticePDF(opts) {
   }
 
   // màu/nét lưới
-  const majorColor = rgb(0.75, 0.79, 0.89); // #BFCAE4
-  const minorColor = rgb(0.84, 0.87, 0.94); // #D5DDEF
-  const borderColor = rgb(0.75, 0.79, 0.89);
-  const majorTh = Math.max(0.8, cell / 180);
+  const majorColor = rgb(0.50, 0.55, 0.72); // ~#7F8DB8
+  const minorColor = rgb(0.68, 0.73, 0.86); // ~#ADB9DB
+  const borderColor = majorColor;
+  // Dày hơn khoảng 1.5–2 lần so với mặc định
+  const majorTh = Math.max(1.2, cell / 120);
   const minorTh = gridOpts?.sameThickness
     ? majorTh
-    : Math.max(0.6, majorTh * 0.66);
+    : Math.max(1.0, majorTh * 0.80);
 
   // helper vẽ lưới theo kiểu đã chọn
   const drawCellGrid = makeGridDrawer(

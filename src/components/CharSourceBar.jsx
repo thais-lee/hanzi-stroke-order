@@ -33,13 +33,13 @@ export default function CharSourceBar({
     );
     const uniq = [];
     for (const ch of arr) if (!uniq.includes(ch)) uniq.push(ch);
-    return uniq.slice(0, 32);
+    return uniq.slice(0, 1000);
   }, [inputStr]);
 
   // chars từ file
   const fileChars = useMemo(() => {
     if (!fileId || !map[fileId]) return [];
-    return map[fileId].chars.slice(0, 32);
+    return map[fileId].chars.slice(0, 1000);
   }, [fileId, map]);
 
   // danh sách “đang dùng thực tế”
