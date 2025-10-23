@@ -286,6 +286,7 @@ function makeGridDrawer(page, colors, thicks, opts) {
   };
 }
 
+// utils/pdfGen.js — thay thế toàn bộ hàm generatePracticePDF bằng bản sau:
 export async function generatePracticePDF(opts) {
   const {
     selected,
@@ -295,27 +296,28 @@ export async function generatePracticePDF(opts) {
     cols = 6,
     marginMm = 12,
 
-    // === LƯỚI ===
+    // Lưới
     gridEnabled = true,
-    gridOpts = GRID_DEFAULTS, // vẫn giữ để tương thích
-    includeDiagonals = false, // tham số cũ
+    gridOpts = GRID_DEFAULTS,
+    includeDiagonals = false,
     showFaint = true,
     faintAlpha = 0.18,
-    sourceMode = 'selected',
+    sourceMode = 'selected', // 'selected' | 'sequence'
     title = 'Bảng luyện viết',
     cjkFontBytes = null,
 
-    // === HƯỚNG DẪN (thứ tự nét) ===
-    guideStepSizePt = 30, // ~30px
-    guideGapPt = 6, // khoảng cách giữa các bước
+    // Hướng dẫn thứ tự nét
+    guideStepSizePt = 30,
+    guideGapPt = 6,
 
-    // === KIỂU LƯỚI MỚI ===
-    gridMode = '3x3', // '3x3' | '2x2' | 'mi' | 'zhong' | 'hui'
-    subdividePerCell4x4 = true, // áp dụng cho 3×3 & 2×2
-    zhongInnerRatio = 0.5, // cỡ ô trung cung (0.25..0.8)
-    huiInnerMarginRatio = 0.16, // lề vào cho khung trong (0.1..0.3)
+    // Kiểu lưới
+    gridMode = '3x3',
+    subdividePerCell4x4 = true,
+    zhongInnerRatio = 0.5,
+    huiInnerMarginRatio = 0.16,
   } = opts;
 
+  // Kích thước trang
   const { w: baseW, h: baseH } = PAGE_SIZES[pageSize] || PAGE_SIZES.A4;
   const isPortrait = orientation === 'portrait';
   const pageW = isPortrait ? baseW : baseH;
@@ -327,11 +329,14 @@ export async function generatePracticePDF(opts) {
   if (cell < 24) throw new Error('CELL_TOO_SMALL');
 
   const doc = await PDFDocument.create();
-  const page = doc.addPage([pageW, pageH]);
 
-  // dữ liệu chữ
+  // Dữ liệu chuỗi
   const rawSeq =
-    sourceMode === 'selected' ? [selected] : chars?.length ? chars : [selected];
+    sourceMode === 'selected'
+      ? [selected] // kí tự sẽ được lặp để lấp đầy
+      : (Array.isArray(chars) ? chars.join('') : chars || '').split('');
+
+  // Kiểm tra ký tự có data
   const checks = await Promise.all(
     rawSeq.map(ch =>
       loadCharData(ch)
@@ -343,61 +348,68 @@ export async function generatePracticePDF(opts) {
   const invalid = checks.filter(r => !r.ok).map(r => r.ch);
   if (!validSeq.length) throw new Error('NO_VALID_CHARS');
 
-  // chuẩn bị glyph mờ cho phần luyện
+  // Chuẩn bị ảnh glyph mờ (cache theo ký tự duy nhất để tiết kiệm)
   const uniqueSeq = Array.from(new Set(validSeq));
   const glyphMap = new Map();
   const basePx = Math.max(360, Math.round(Math.max(cell * 2.4, 480)));
   const pxCap = uniqueSeq.length > 24 ? 600 : 900;
+
+  const embedGlyph = async ch => {
+    if (glyphMap.has(ch)) return glyphMap.get(ch);
+    const px = Math.min(basePx, pxCap);
+    const pad = Math.max(0, Math.round((px * (1 - GLYPH_SCALE)) / 2));
+    const url = await makeGlyphPngDataUrl(ch, px, pad, faintAlpha);
+    const img = await doc.embedPng(url);
+    glyphMap.set(ch, img);
+    return img;
+  };
   if (showFaint) {
     for (const ch of uniqueSeq) {
-      const px = Math.min(basePx, pxCap);
-      const pad = Math.max(0, Math.round((px * (1 - GLYPH_SCALE)) / 2));
-      const url = await makeGlyphPngDataUrl(ch, px, pad, faintAlpha);
-      const img = await doc.embedPng(url);
-      glyphMap.set(ch, img);
+      await embedGlyph(ch);
     }
   }
 
-  // màu/nét lưới
-  const majorColor = rgb(0.50, 0.55, 0.72); // ~#7F8DB8
-  const minorColor = rgb(0.68, 0.73, 0.86); // ~#ADB9DB
+  // Màu & nét lưới (đậm hơn để in ra rõ)
+  const majorColor = rgb(0.5, 0.55, 0.72);
+  const minorColor = rgb(0.68, 0.73, 0.86);
   const borderColor = majorColor;
-  // Dày hơn khoảng 1.5–2 lần so với mặc định
-  const majorTh = Math.max(1.2, cell / 120);
+  const majorTh = Math.max(1.5, cell / 120);
   const minorTh = gridOpts?.sameThickness
     ? majorTh
-    : Math.max(1.0, majorTh * 0.80);
+    : Math.max(0.6, majorTh * 0.4);
 
-  // helper vẽ lưới theo kiểu đã chọn
-  const drawCellGrid = makeGridDrawer(
-    page,
-    { majorColor, minorColor, borderColor },
-    { majorTh, minorTh },
-    {
-      includeDiagonals,
-      gridMode,
-      subdividePerCell4x4,
-      zhongInnerRatio,
-      huiInnerMarginRatio,
-    },
-  );
+  // Helper vẽ lưới theo kiểu
+  const makeDrawer = page =>
+    makeGridDrawer(
+      page,
+      { majorColor, minorColor, borderColor },
+      { majorTh, minorTh },
+      {
+        includeDiagonals,
+        gridMode,
+        subdividePerCell4x4,
+        zhongInnerRatio,
+        huiInnerMarginRatio,
+      },
+    );
 
-  // ===== PHẦN 1: HƯỚNG DẪN – KHÔNG PHỤ THUỘC COLS =====
+  // ===== Trang đầu: có hàng hướng dẫn thứ tự nét =====
+  let page = doc.addPage([pageW, pageH]);
+  let drawCellGrid = makeDrawer(page);
+
+  // Render các bước hướng dẫn theo ký tự đầu tiên của chuỗi hợp lệ
   const guideChar = validSeq[0];
   const guideData = await loadCharData(guideChar);
   const strokeCount = guideData.strokes.length;
 
-  // render ở độ phân giải cao rồi thu về 30pt để mịn
-  const pxGuide = 240;
+  const pxGuide = 240; // render to -> downscale to step size for crisp
   const padGuide = Math.max(0, Math.round((pxGuide * (1 - GLYPH_SCALE)) / 2));
   const stepImgs = [];
   for (let i = 0; i < strokeCount; i++) {
     const url = await makeGlyphStepPngDataUrl(guideChar, pxGuide, padGuide, i);
-    const img = await doc.embedPng(url);
-    stepImgs.push(img);
+    stepImgs.push(await doc.embedPng(url));
   }
 
-  // xếp ngang liên tiếp, tự wrap
   const stepW = guideStepSizePt;
   const stepH = guideStepSizePt;
   const gap = Math.max(0, guideGapPt);
@@ -412,43 +424,78 @@ export async function generatePracticePDF(opts) {
     const row = Math.floor(i / perRow);
     const col = i % perRow;
     const x = margin + col * (stepW + gap);
-    const topY = pageH - margin - (row + 1) * stepH - row * gap;
-    const y = topY;
-    page.drawImage(stepImgs[i], {
-      x,
-      y,
-      width: stepW,
-      height: stepH,
-      opacity: 1,
-    });
+    const y = pageH - margin - (row + 1) * stepH - row * gap;
+    page.drawImage(stepImgs[i], { x, y, width: stepW, height: stepH });
   }
 
-  // ===== PHẦN 2: LƯỚI LUYỆN CHỮ Ở DƯỚI =====
+  // Số hàng grid trên trang đầu (phía dưới khu hướng dẫn)
   const remainingH = pageH - margin * 2 - guideAreaH;
-  const gridRows = Math.max(1, Math.floor(remainingH / cell));
-  if (gridRows < 1) throw new Error('NOT_ENOUGH_SPACE_FOR_GRID');
+  const gridRowsFirst = Math.max(1, Math.floor(remainingH / cell));
 
-  const gridTopStart = margin + guideAreaH; // khoảng từ đáy
-  let idxCell = 0;
-  for (let r = 0; r < gridRows; r++) {
+  // Từ trang thứ 2 trở đi: full chiều cao
+  const gridRowsFull = Math.max(1, Math.floor((pageH - margin * 2) / cell));
+
+  // // Vẽ đầy đủ chuỗi vào nhiều trang
+  // const perPageFirst = gridRowsFirst * _cols;
+  // const perPageNext = gridRowsFull * _cols;
+
+  let seqIndex = 0; // con trỏ ký tự (theo thứ tự nhập)
+  const seqLen = validSeq.length;
+
+  // helper lấy ký tự cho một ô
+  const nextChar = () =>
+    sourceMode === 'selected'
+      ? validSeq[0] // lặp lại ký tự đang chọn
+      : validSeq[seqIndex++]; // lần lượt theo chuỗi nhập
+
+  // Trang đầu
+  const startYTop = margin + guideAreaH; // tính từ đáy
+  // let drawnThisPage = 0;
+  for (let r = 0; r < gridRowsFirst; r++) {
     for (let c = 0; c < _cols; c++) {
+      if (sourceMode === 'sequence' && seqIndex >= seqLen) break;
       const x = margin + c * cell;
-      const yTop = gridTopStart + r * cell;
+      const yTop = startYTop + r * cell;
       const y = pageH - (yTop + cell);
 
       if (gridEnabled) drawCellGrid(x, y, cell);
-
-      if (showFaint && glyphMap.size) {
-        const ch = validSeq[idxCell % validSeq.length];
-        const img = glyphMap.get(ch);
-        if (img)
-          page.drawImage(img, { x, y, width: cell, height: cell, opacity: 1 });
+      if (showFaint) {
+        const ch = nextChar();
+        const img = await embedGlyph(ch);
+        page.drawImage(img, { x, y, width: cell, height: cell });
+      } else if (sourceMode === 'sequence') {
+        // nếu không showFaint vẫn cần tăng con trỏ
+        nextChar();
       }
-      idxCell++;
+      // drawnThisPage++;
+    }
+    if (sourceMode === 'sequence' && seqIndex >= seqLen) break;
+  }
+
+  // Các trang kế tiếp
+  while (sourceMode === 'sequence' && seqIndex < seqLen) {
+    page = doc.addPage([pageW, pageH]);
+    drawCellGrid = makeDrawer(page);
+
+    for (let r = 0; r < gridRowsFull && seqIndex < seqLen; r++) {
+      for (let c = 0; c < _cols && seqIndex < seqLen; c++) {
+        const x = margin + c * cell;
+        const yTop = margin + r * cell;
+        const y = pageH - (yTop + cell);
+
+        if (gridEnabled) drawCellGrid(x, y, cell);
+        if (showFaint) {
+          const ch = nextChar();
+          const img = await embedGlyph(ch);
+          page.drawImage(img, { x, y, width: cell, height: cell });
+        } else {
+          nextChar();
+        }
+      }
     }
   }
 
-  // footer
+  // Footer
   const rawFooter = `${
     title || 'Practice sheet'
   } • ${new Date().toLocaleDateString()}`;
@@ -465,7 +512,9 @@ export async function generatePracticePDF(opts) {
     font = await doc.embedFont(StandardFonts.Helvetica);
     footerText = asciiOnly(rawFooter);
   }
-  page.drawText(footerText, {
+  // vẽ footer lên trang cuối
+  const lastPage = doc.getPage(doc.getPageCount() - 1);
+  lastPage.drawText(footerText, {
     x: margin,
     y: margin / 2.2,
     size: 9,
@@ -473,19 +522,22 @@ export async function generatePracticePDF(opts) {
     color: rgb(0.45, 0.47, 0.5),
   });
 
+  // Trả kết quả
   const bytes = await doc.save();
   const blob = new Blob([bytes], { type: 'application/pdf' });
 
+  const pages = doc.getPageCount();
   const info =
-    `${_cols} cột • ${gridRows} hàng luyện ` +
-    `(+ ${guideRows} hàng hướng dẫn, ${strokeCount} bước) • lưới=${gridMode}` +
+    `${_cols} cột • lưới=${gridMode}` +
     (subdividePerCell4x4 && (gridMode === '3x3' || gridMode === '2x2')
       ? ' + 4×4/ô con'
       : '') +
-    ` • ô ~${Math.round(cell)}pt (${Math.round(cell * 0.3528)}mm)`;
+    ` • ô ~${Math.round(cell)}pt (${Math.round(cell * 0.3528)}mm)` +
+    ` • ${pages} trang`;
   const warn = invalid.length
     ? `Bỏ qua ký tự không có dữ liệu: ${invalid.join(' ')}`
     : '';
+
   return { blob, info, warn };
 }
 

@@ -34,7 +34,7 @@ export default function App() {
     const filtered = Array.from(inputStr || '').filter(ch => ch.trim());
     const unique = [];
     for (const ch of filtered) if (!unique.includes(ch)) unique.push(ch);
-    return unique.slice(0, 32);
+    return unique;
   }, [inputStr]);
 
   // --- Từ các file .txt trong src/data ---
