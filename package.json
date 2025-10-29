@@ -12,6 +12,8 @@
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
+    "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0",
     "gif.js.optimized": "^1.0.1",
     "hanzi-writer": "^3.7.2",
     "hanzi-writer-data": "^2.0.1",
