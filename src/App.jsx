@@ -699,7 +699,7 @@ export default function App() {
           />
         </div>
       </div>
-      <SpeedInsights />
+      <SpeedInsights url={typeof window !== 'undefined' ? window.location.origin : ''} />
     </>
   );
 }
