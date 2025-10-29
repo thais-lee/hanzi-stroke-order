@@ -10,6 +10,7 @@ import SettingsModal from './components/SettingsModal';
 
 import { GRID_DEFAULTS } from './utils/misc';
 import { loadCharCategories } from './utils/charLists';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 import {
   batchExportMP4Zip,
@@ -318,384 +319,387 @@ export default function App() {
 
   // ===== UI =====
   return (
-    <div className="app">
-      <div className="wrap">
-        <h1
-          className="h1"
-          style={{
-            marginBottom: 16,
-            fontSize: '2.6rem',
-            background: 'linear-gradient(90deg, #ff8a00, #e52e71)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            userSelect: 'none',
-            letterSpacing: '0.05em',
-            marginTop: '12px',
-          }}
-        >
-          Tra cứu thứ tự nét chữ Hán
-        </h1>
+    <>
+      <div className="app">
+        <div className="wrap">
+          <h1
+            className="h1"
+            style={{
+              marginBottom: 16,
+              fontSize: '2.6rem',
+              background: 'linear-gradient(90deg, #ff8a00, #e52e71)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontWeight: 'bold',
+              textAlign: 'center',
+              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              userSelect: 'none',
+              letterSpacing: '0.05em',
+              marginTop: '12px',
+            }}
+          >
+            Tra cứu thứ tự nét chữ Hán
+          </h1>
 
-        {/* ===== Hàng chọn nguồn + nhập/chọn ký tự ===== */}
-        <div className="section">
-          {/* Nguồn ký tự */}
-          <div className="row">
-            <label>Nguồn ký tự</label>
-            <select
-              className="select"
-              value={charSource}
-              onChange={e => setCharSource(e.target.value)}
-            >
-              <option value="manual">Nhập trực tiếp</option>
-              <option value="list">Hán Tự Nhập Môn</option>
-            </select>
-          </div>
-
-          {/* Cùng hàng: input + dropdown nhóm file */}
-          <div className="row" style={{ gap: 8, alignItems: 'center' }}>
-            <label>Ký tự</label>
-            <input
-              className="input"
-              style={{
-                flex: 1,
-                borderWidth: charSource !== 'manual' ? 1 : 2,
-                borderColor: charSource !== 'manual' ? '#ccc' : '#888',
-              }}
-              value={inputStr}
-              onChange={e => setInputStr(e.target.value)}
-              placeholder="Nhập nhiều ký tự (ví dụ: 佛法僧)"
-              disabled={charSource === 'list'}
-            />
-            <select
-              className="select"
-              value={selectedCatId}
-              onChange={e => setSelectedCatId(e.target.value)}
-              style={{
-                width: 240,
-                borderWidth: charSource !== 'list' ? 1 : 2,
-                borderColor: charSource !== 'list' ? '#ccc' : '#888',
-              }}
-              disabled={!categories.length || charSource !== 'list'}
-            >
-              {categories.map(g => (
-                <option key={g.id} value={g.id}>
-                  {g.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Nếu nhập tay → chips; nếu từ file → dropdown ký tự */}
-          {charSource === 'manual' ? (
-            !!manualChars.length && (
-              <div className="row" style={{ alignItems: 'flex-start' }}>
-                <label>Chọn ký tự</label>
-                <div className="chips">
-                  {manualChars.map(ch => (
-                    <button
-                      key={ch}
-                      className={'chip' + (selected === ch ? ' active' : '')}
-                      onClick={() => setSelected(ch)}
-                    >
-                      {ch}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )
-          ) : (
+          {/* ===== Hàng chọn nguồn + nhập/chọn ký tự ===== */}
+          <div className="section">
+            {/* Nguồn ký tự */}
             <div className="row">
-              <label>Ký tự trong nhóm</label>
+              <label>Nguồn ký tự</label>
               <select
                 className="select"
-                value={selected}
-                onChange={e => setSelected(e.target.value)}
+                value={charSource}
+                onChange={e => setCharSource(e.target.value)}
               >
-                {(currentCat?.items || []).map((it, idx) => (
-                  <option key={`${it.value}-${idx}`} value={it.value}>
-                    {it.label}
+                <option value="manual">Nhập trực tiếp</option>
+                <option value="list">Hán Tự Nhập Môn</option>
+              </select>
+            </div>
+
+            {/* Cùng hàng: input + dropdown nhóm file */}
+            <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+              <label>Ký tự</label>
+              <input
+                className="input"
+                style={{
+                  flex: 1,
+                  borderWidth: charSource !== 'manual' ? 1 : 2,
+                  borderColor: charSource !== 'manual' ? '#ccc' : '#888',
+                }}
+                value={inputStr}
+                onChange={e => setInputStr(e.target.value)}
+                placeholder="Nhập nhiều ký tự (ví dụ: 佛法僧)"
+                disabled={charSource === 'list'}
+              />
+              <select
+                className="select"
+                value={selectedCatId}
+                onChange={e => setSelectedCatId(e.target.value)}
+                style={{
+                  width: 240,
+                  borderWidth: charSource !== 'list' ? 1 : 2,
+                  borderColor: charSource !== 'list' ? '#ccc' : '#888',
+                }}
+                disabled={!categories.length || charSource !== 'list'}
+              >
+                {categories.map(g => (
+                  <option key={g.id} value={g.id}>
+                    {g.label}
                   </option>
                 ))}
               </select>
-              <span className="muted">({fileChars.length} ký tự)</span>
             </div>
+
+            {/* Nếu nhập tay → chips; nếu từ file → dropdown ký tự */}
+            {charSource === 'manual' ? (
+              !!manualChars.length && (
+                <div className="row" style={{ alignItems: 'flex-start' }}>
+                  <label>Chọn ký tự</label>
+                  <div className="chips">
+                    {manualChars.map(ch => (
+                      <button
+                        key={ch}
+                        className={'chip' + (selected === ch ? ' active' : '')}
+                        onClick={() => setSelected(ch)}
+                      >
+                        {ch}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="row">
+                <label>Ký tự trong nhóm</label>
+                <select
+                  className="select"
+                  value={selected}
+                  onChange={e => setSelected(e.target.value)}
+                >
+                  {(currentCat?.items || []).map((it, idx) => (
+                    <option key={`${it.value}-${idx}`} value={it.value}>
+                      {it.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="muted">({fileChars.length} ký tự)</span>
+              </div>
+            )}
+
+            {/* Công tắc lưới nhanh */}
+            <div className="row">
+              <label>Hiện lưới</label>
+              <input
+                type="checkbox"
+                checked={gridEnabled}
+                onChange={e => setGridEnabled(e.target.checked)}
+              />
+            </div>
+
+            {/* NEW: Kiểu lưới */}
+            <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+              <label>Kiểu lưới</label>
+              <select
+                className="select"
+                value={pdfGridMode}
+                onChange={e => setPdfGridMode(e.target.value)}
+                style={{ width: 220 }}
+              >
+                <option value="3x3">九宫格 (3×3)</option>
+                <option value="2x2">田字格 (2×2)</option>
+                <option value="mi">米字格 (mễ tự cách)</option>
+                <option value="zhong">中宫格 (trung cung)</option>
+                <option value="hui">回宫格 (hồi cung)</option>
+              </select>
+
+              {(pdfGridMode === '3x3' || pdfGridMode === '2x2') && (
+                <>
+                  <label style={{ marginLeft: 8 }}>Chia 4×4 trong ô con</label>
+                  <input
+                    type="checkbox"
+                    checked={pdfSubdivide4x4}
+                    onChange={e => setPdfSubdivide4x4(e.target.checked)}
+                  />
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Nút mở modal nâng cao */}
+          <div
+            className="section"
+            style={{
+              display: 'flex',
+              gap: 8,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <button className="btn" onClick={() => setSettingsOpen(true)}>
+              ⚙️ Cài đặt nâng cao
+            </button>
+            <div className="muted">Ký tự hiện có: {chars.length}</div>
+          </div>
+
+          {/* Modal (các tuỳ chọn chi tiết) */}
+          <SettingsModal
+            open={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            inputStr={inputStr}
+            setInputStr={setInputStr}
+            chars={chars}
+            selected={selected}
+            setSelected={setSelected}
+            size={size}
+            setSize={setSize}
+            strokeColor={strokeColor}
+            setStrokeColor={setStrokeColor}
+            radicalColor={radicalColor}
+            setRadicalColor={setRadicalColor}
+            showOutline={showOutline}
+            setShowOutline={setShowOutline}
+            showChar={showChar}
+            setShowChar={setShowChar}
+            speed={speed}
+            setSpeed={setSpeed}
+            delayBetweenStrokes={delayBetweenStrokes}
+            setDelayBetweenStrokes={setDelayBetweenStrokes}
+            renderer={renderer}
+            setRenderer={setRenderer}
+            gridEnabled={gridEnabled}
+            setGridEnabled={setGridEnabled}
+            exportMult={exportMult}
+            setExportMult={setExportMult}
+            exportFps={exportFps}
+            setExportFps={setExportFps}
+            exportBitrateKbps={exportBitrateKbps}
+            setExportBitrateKbps={setExportBitrateKbps}
+            pdfPageSize={pdfPageSize}
+            setPdfPageSize={setPdfPageSize}
+            pdfOrientation={pdfOrientation}
+            setPdfOrientation={setPdfOrientation}
+            pdfCols={pdfCols}
+            setPdfCols={setPdfCols}
+            pdfMarginMm={pdfMarginMm}
+            setPdfMarginMm={setPdfMarginMm}
+            pdfIncludeDiagonals={pdfIncludeDiagonals}
+            setPdfIncludeDiagonals={setPdfIncludeDiagonals}
+            pdfShowFaint={pdfShowFaint}
+            setPdfShowFaint={setPdfShowFaint}
+            pdfFaintAlpha={pdfFaintAlpha}
+            setPdfFaintAlpha={setPdfFaintAlpha}
+            pdfSourceMode={pdfSourceMode}
+            setPdfSourceMode={setPdfSourceMode}
+            pdfTitle={pdfTitle}
+            setPdfTitle={setPdfTitle}
+            value={{
+              inputStr,
+              size,
+              strokeColor,
+              radicalColor,
+              showOutline,
+              showChar,
+              speed,
+              delayBetweenStrokes,
+              renderer,
+              exportMult,
+              exportFps,
+              exportBitrateKbps,
+              gridEnabled,
+              pdfPageSize,
+              pdfOrientation,
+              pdfCols,
+              pdfMarginMm,
+              pdfIncludeDiagonals,
+              pdfShowFaint,
+              pdfFaintAlpha,
+              pdfSourceMode,
+              pdfTitle,
+            }}
+            onApply={v => {
+              setInputStr(v.inputStr);
+              setSize(v.size);
+              setStrokeColor(v.strokeColor);
+              setRadicalColor(v.radicalColor);
+              setShowOutline(v.showOutline);
+              setShowChar(v.showChar);
+              setSpeed(v.speed);
+              setDelayBetweenStrokes(v.delayBetweenStrokes);
+              setRenderer(v.renderer);
+              setExportMult(v.exportMult);
+              setExportFps(v.exportFps);
+              setExportBitrateKbps(v.exportBitrateKbps);
+              setGridEnabled(v.gridEnabled);
+              setPdfPageSize(v.pdfPageSize);
+              setPdfOrientation(v.pdfOrientation);
+              setPdfCols(v.pdfCols);
+              setPdfMarginMm(v.pdfMarginMm);
+              setPdfIncludeDiagonals(v.pdfIncludeDiagonals);
+              setPdfShowFaint(v.pdfShowFaint);
+              setPdfFaintAlpha(v.pdfFaintAlpha);
+              setPdfSourceMode(v.pdfSourceMode);
+              setPdfTitle(v.pdfTitle);
+            }}
+          />
+
+          {/* Sân khấu animation */}
+          <Stage
+            selected={selected}
+            size={size}
+            basePadding={basePadding}
+            showOutline={showOutline}
+            showChar={showChar}
+            speed={speed}
+            delayBetweenStrokes={delayBetweenStrokes}
+            strokeColor={strokeColor}
+            radicalColor={radicalColor}
+            renderer={renderer}
+            showGrid={gridEnabled}
+            busyMsg={busyMsg}
+            gridMode={pdfGridMode}
+            subdividePerCell4x4={pdfSubdivide4x4}
+            includeDiagonals={pdfIncludeDiagonals}
+            buttonsRight={
+              <>
+                <button className="btn" onClick={exportMP4}>
+                  Tải MP4
+                </button>
+                <button
+                  className="btn secondary"
+                  onClick={exportZip}
+                  disabled={batching || !chars.length}
+                >
+                  Tải ZIP (MP4, {chars.length})
+                </button>
+              </>
+            }
+          />
+
+          {batching && (
+            <ProgressBars
+              batching={batching}
+              batchMsg={batchMsg}
+              overallCount={overallCount}
+              convPct={convPct}
+              zipPct={zipPct}
+            />
           )}
 
-          {/* Công tắc lưới nhanh */}
-          <div className="row">
-            <label>Hiện lưới</label>
-            <input
-              type="checkbox"
-              checked={gridEnabled}
-              onChange={e => setGridEnabled(e.target.checked)}
-            />
-          </div>
-
-          {/* NEW: Kiểu lưới */}
-          <div className="row" style={{ gap: 8, alignItems: 'center' }}>
-            <label>Kiểu lưới</label>
-            <select
-              className="select"
-              value={pdfGridMode}
-              onChange={e => setPdfGridMode(e.target.value)}
-              style={{ width: 220 }}
-            >
-              <option value="3x3">九宫格 (3×3)</option>
-              <option value="2x2">田字格 (2×2)</option>
-              <option value="mi">米字格 (mễ tự cách)</option>
-              <option value="zhong">中宫格 (trung cung)</option>
-              <option value="hui">回宫格 (hồi cung)</option>
-            </select>
-
-            {(pdfGridMode === '3x3' || pdfGridMode === '2x2') && (
-              <>
-                <label style={{ marginLeft: 8 }}>Chia 4×4 trong ô con</label>
-                <input
-                  type="checkbox"
-                  checked={pdfSubdivide4x4}
-                  onChange={e => setPdfSubdivide4x4(e.target.checked)}
-                />
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Nút mở modal nâng cao */}
-        <div
-          className="section"
-          style={{
-            display: 'flex',
-            gap: 8,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <button className="btn" onClick={() => setSettingsOpen(true)}>
-            ⚙️ Cài đặt nâng cao
-          </button>
-          <div className="muted">Ký tự hiện có: {chars.length}</div>
-        </div>
-
-        {/* Modal (các tuỳ chọn chi tiết) */}
-        <SettingsModal
-          open={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
-          inputStr={inputStr}
-          setInputStr={setInputStr}
-          chars={chars}
-          selected={selected}
-          setSelected={setSelected}
-          size={size}
-          setSize={setSize}
-          strokeColor={strokeColor}
-          setStrokeColor={setStrokeColor}
-          radicalColor={radicalColor}
-          setRadicalColor={setRadicalColor}
-          showOutline={showOutline}
-          setShowOutline={setShowOutline}
-          showChar={showChar}
-          setShowChar={setShowChar}
-          speed={speed}
-          setSpeed={setSpeed}
-          delayBetweenStrokes={delayBetweenStrokes}
-          setDelayBetweenStrokes={setDelayBetweenStrokes}
-          renderer={renderer}
-          setRenderer={setRenderer}
-          gridEnabled={gridEnabled}
-          setGridEnabled={setGridEnabled}
-          exportMult={exportMult}
-          setExportMult={setExportMult}
-          exportFps={exportFps}
-          setExportFps={setExportFps}
-          exportBitrateKbps={exportBitrateKbps}
-          setExportBitrateKbps={setExportBitrateKbps}
-          pdfPageSize={pdfPageSize}
-          setPdfPageSize={setPdfPageSize}
-          pdfOrientation={pdfOrientation}
-          setPdfOrientation={setPdfOrientation}
-          pdfCols={pdfCols}
-          setPdfCols={setPdfCols}
-          pdfMarginMm={pdfMarginMm}
-          setPdfMarginMm={setPdfMarginMm}
-          pdfIncludeDiagonals={pdfIncludeDiagonals}
-          setPdfIncludeDiagonals={setPdfIncludeDiagonals}
-          pdfShowFaint={pdfShowFaint}
-          setPdfShowFaint={setPdfShowFaint}
-          pdfFaintAlpha={pdfFaintAlpha}
-          setPdfFaintAlpha={setPdfFaintAlpha}
-          pdfSourceMode={pdfSourceMode}
-          setPdfSourceMode={setPdfSourceMode}
-          pdfTitle={pdfTitle}
-          setPdfTitle={setPdfTitle}
-          value={{
-            inputStr,
-            size,
-            strokeColor,
-            radicalColor,
-            showOutline,
-            showChar,
-            speed,
-            delayBetweenStrokes,
-            renderer,
-            exportMult,
-            exportFps,
-            exportBitrateKbps,
-            gridEnabled,
-            pdfPageSize,
-            pdfOrientation,
-            pdfCols,
-            pdfMarginMm,
-            pdfIncludeDiagonals,
-            pdfShowFaint,
-            pdfFaintAlpha,
-            pdfSourceMode,
-            pdfTitle,
-          }}
-          onApply={v => {
-            setInputStr(v.inputStr);
-            setSize(v.size);
-            setStrokeColor(v.strokeColor);
-            setRadicalColor(v.radicalColor);
-            setShowOutline(v.showOutline);
-            setShowChar(v.showChar);
-            setSpeed(v.speed);
-            setDelayBetweenStrokes(v.delayBetweenStrokes);
-            setRenderer(v.renderer);
-            setExportMult(v.exportMult);
-            setExportFps(v.exportFps);
-            setExportBitrateKbps(v.exportBitrateKbps);
-            setGridEnabled(v.gridEnabled);
-            setPdfPageSize(v.pdfPageSize);
-            setPdfOrientation(v.pdfOrientation);
-            setPdfCols(v.pdfCols);
-            setPdfMarginMm(v.pdfMarginMm);
-            setPdfIncludeDiagonals(v.pdfIncludeDiagonals);
-            setPdfShowFaint(v.pdfShowFaint);
-            setPdfFaintAlpha(v.pdfFaintAlpha);
-            setPdfSourceMode(v.pdfSourceMode);
-            setPdfTitle(v.pdfTitle);
-          }}
-        />
-
-        {/* Sân khấu animation */}
-        <Stage
-          selected={selected}
-          size={size}
-          basePadding={basePadding}
-          showOutline={showOutline}
-          showChar={showChar}
-          speed={speed}
-          delayBetweenStrokes={delayBetweenStrokes}
-          strokeColor={strokeColor}
-          radicalColor={radicalColor}
-          renderer={renderer}
-          showGrid={gridEnabled}
-          busyMsg={busyMsg}
-          gridMode={pdfGridMode}
-          subdividePerCell4x4={pdfSubdivide4x4}
-          includeDiagonals={pdfIncludeDiagonals}
-          buttonsRight={
-            <>
-              <button className="btn" onClick={exportMP4}>
-                Tải MP4
-              </button>
-              <button
-                className="btn secondary"
-                onClick={exportZip}
-                disabled={batching || !chars.length}
-              >
-                Tải ZIP (MP4, {chars.length})
-              </button>
-            </>
-          }
-        />
-
-        {batching && (
-          <ProgressBars
-            batching={batching}
-            batchMsg={batchMsg}
-            overallCount={overallCount}
-            convPct={convPct}
-            zipPct={zipPct}
+          <StepsGrid
+            selected={selected}
+            strokeColor={strokeColor}
+            gridEnabled={gridEnabled}
+            gridMode={pdfGridMode}
+            subdividePerCell4x4={false}
+            includeDiagonals={pdfIncludeDiagonals}
           />
-        )}
 
-        <StepsGrid
-          selected={selected}
-          strokeColor={strokeColor}
-          gridEnabled={gridEnabled}
-          gridMode={pdfGridMode}
-          subdividePerCell4x4={false}
-          includeDiagonals={pdfIncludeDiagonals}
-        />
+          <PDFPanel
+            pdfPageSize={pdfPageSize}
+            setPdfPageSize={setPdfPageSize}
+            pdfOrientation={pdfOrientation}
+            setPdfOrientation={setPdfOrientation}
+            pdfCols={pdfCols}
+            setPdfCols={setPdfCols}
+            pdfMarginMm={pdfMarginMm}
+            setPdfMarginMm={setPdfMarginMm}
+            pdfIncludeDiagonals={pdfIncludeDiagonals}
+            setPdfIncludeDiagonals={setPdfIncludeDiagonals}
+            pdfShowFaint={pdfShowFaint}
+            setPdfShowFaint={setPdfShowFaint}
+            pdfFaintAlpha={pdfFaintAlpha}
+            setPdfFaintAlpha={setPdfFaintAlpha}
+            pdfSourceMode={pdfSourceMode}
+            setPdfSourceMode={setPdfSourceMode}
+            pdfTitle={pdfTitle}
+            setPdfTitle={setPdfTitle}
+            cjkFontBytes={cjkFontBytes}
+            selected={selected}
+            chars={chars}
+            pdfUrl={pdfUrl}
+            setPdfUrl={setPdfUrl}
+            setBusyMsg={setBusyMsg}
+            pdfWarn={pdfWarn}
+            setPdfWarn={setPdfWarn}
+            pdfInfo={pdfInfo}
+            setPdfInfo={setPdfInfo}
+            gridEnabled={gridEnabled}
+            setGridEnabled={setGridEnabled}
+            pdfGridMode={pdfGridMode}
+            setPdfGridMode={setPdfGridMode}
+            pdfSubdivide4x4={pdfSubdivide4x4}
+            setPdfSubdivide4x4={setPdfSubdivide4x4}
+          />
 
-        <PDFPanel
-          pdfPageSize={pdfPageSize}
-          setPdfPageSize={setPdfPageSize}
-          pdfOrientation={pdfOrientation}
-          setPdfOrientation={setPdfOrientation}
-          pdfCols={pdfCols}
-          setPdfCols={setPdfCols}
-          pdfMarginMm={pdfMarginMm}
-          setPdfMarginMm={setPdfMarginMm}
-          pdfIncludeDiagonals={pdfIncludeDiagonals}
-          setPdfIncludeDiagonals={setPdfIncludeDiagonals}
-          pdfShowFaint={pdfShowFaint}
-          setPdfShowFaint={setPdfShowFaint}
-          pdfFaintAlpha={pdfFaintAlpha}
-          setPdfFaintAlpha={setPdfFaintAlpha}
-          pdfSourceMode={pdfSourceMode}
-          setPdfSourceMode={setPdfSourceMode}
-          pdfTitle={pdfTitle}
-          setPdfTitle={setPdfTitle}
-          cjkFontBytes={cjkFontBytes}
-          selected={selected}
-          chars={chars}
-          pdfUrl={pdfUrl}
-          setPdfUrl={setPdfUrl}
-          setBusyMsg={setBusyMsg}
-          pdfWarn={pdfWarn}
-          setPdfWarn={setPdfWarn}
-          pdfInfo={pdfInfo}
-          setPdfInfo={setPdfInfo}
-          gridEnabled={gridEnabled}
-          setGridEnabled={setGridEnabled}
-          pdfGridMode={pdfGridMode}
-          setPdfGridMode={setPdfGridMode}
-          pdfSubdivide4x4={pdfSubdivide4x4}
-          setPdfSubdivide4x4={setPdfSubdivide4x4}
-        />
-
-        {/* ===== NEW: Nút tải PDF loạt chữ ===== */}
-        <div
-          className="section"
-          style={{ display: 'flex', gap: 8, justifyContent: 'center' }}
-        >
-          <button
-            className="btn"
-            onClick={exportBatchPdfCombined}
-            disabled={!chars.length}
+          {/* ===== NEW: Nút tải PDF loạt chữ ===== */}
+          <div
+            className="section"
+            style={{ display: 'flex', gap: 8, justifyContent: 'center' }}
           >
-            📄 Tải PDF (gộp, {chars.length})
-          </button>
-          <button
-            className="btn secondary"
-            onClick={exportBatchPdfZip}
-            disabled={!chars.length}
-          >
-            🗜️ Tải ZIP (PDF, {chars.length})
-          </button>
+            <button
+              className="btn"
+              onClick={exportBatchPdfCombined}
+              disabled={!chars.length}
+            >
+              📄 Tải PDF (gộp, {chars.length})
+            </button>
+            <button
+              className="btn secondary"
+              onClick={exportBatchPdfZip}
+              disabled={!chars.length}
+            >
+              🗜️ Tải ZIP (PDF, {chars.length})
+            </button>
+          </div>
+
+          {/* Hidden mount cho xuất video */}
+          <div
+            ref={hiddenMountRef}
+            style={{ position: 'absolute', left: -99999, top: -99999 }}
+          />
         </div>
-
-        {/* Hidden mount cho xuất video */}
-        <div
-          ref={hiddenMountRef}
-          style={{ position: 'absolute', left: -99999, top: -99999 }}
-        />
       </div>
-    </div>
+      <SpeedInsights />
+    </>
   );
 }
