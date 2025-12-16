@@ -1,10 +1,60 @@
 Chỉ Sự - Chính Lệ
-1 . 一 nhất ; 2 . 二 nhị; 3 . 三 tam; 4 . 四 tứ; 5 . 五 ngũ ; 6 . 六 lục; 
-7 . 七 thất ; 8 . 八  bát; 9 . 九 cửu;10 . 十 thập ; 11 . 上 thượng;12 . 下 hạ ;
-13 . 永 vĩnh; 14 . 派 phái; 15 . 交 giao ; 16 . 旡 ký ; 17 . 出 xuất ; 18 . 入 nhập ;
-19 . 才tài ; 20 . 耑 đoan ; 21 . 之 chi; 22 . 至 chí;23 . 文 văn ; 24 . 齊 tề; 
-25 . 小 tiểu; 26 . 少 thiếu; 27 . 垂 thùy; 28 . 尸thi ; 29 . 示 thị; 30 . 各 các; 
-31 . 天 thiên; 32 . 仌băng ; 33 . 冖 mịch;34 . 殳 thù; 35 . 冓 cấu; 36 . 卜 bốc;
- 37 . 爻 hào; 38 . 凶hung ; 39 . 毌 quán; 40 . 于 vu ; 41 . 豸 trĩ; 42 . 丮 kịch; 
-43 . 囗 vi; 44 . 皀 tấp;45 . 丨 cổn; 46 . 丂 khảo; 47 . 夊tuy ; 48 . 丩cưu ;
- 49 . 予 dữ; 50 . 乃 nãi ; 51 . 西 tây;
+1. 一-nhất-chỉ con số một;
+2. 二-nhị-chỉ con số hai;
+3. 三-tam-chỉ con số ba;
+4. 四-tứ-chỉ con số bốn;
+5. 五-ngũ-chỉ con số năm;
+6. 六-lục-chỉ con số sáu;
+
+7. 七-thất-chỉ con số bảy;
+8. 八-bát-chỉ sự phân tách sau được mượn để chỉ số 8;
+9. 九-cửu-chỉ số chín;
+10. 十-thập-chỉ số mười;
+11. 上-thượng-chỉ vị trí phía trên;
+12. 下-hạ-chỉ vị trí phía dưới;
+
+13. 永-vĩnh-chỉ dòng nước sông chảy mãi;
+14. 派-phái-chỉ nhánh nhỏ tách ra từ sông lớn;
+15. 交-giao-chỉ cho 2 chân người có 2 chân vắt chéo nhau;
+16. 旡-ký-chỉ hình dạng ăn uống không hợp lý dẫn đến không thở được (nấc, nghẹn);
+17. 出-xuất-chỉ cho việc đi ra ngoài;
+18. 入-nhập-mô phỏng đầu nhọn đâm vào vật;
+
+19. 才-tài-giống cây cỏ mới mọc;
+20. 耑-đoan-chỉ cho cỏ cây mới mọc;
+21. 之-chi-đi về phía trước;
+22. 至-chí-chỉ sự đến nơi, "đạt đến";
+23. 文-văn-chỉ các đường nét giao nhau, đan xen;
+24. 齊-tề-chỉ cây lúa và mì trổ bông đều tăm tắp;
+
+25. 小-tiểu-tiểu của tiểu đại(nhỏ của lớn nhỏ);
+26. 少-thiếu-có nghĩa là không nhiều;
+27. 垂-thùy-chỉ sự rũ xuống của cỏ cây hoa lá;
+28. 尸-thi-giống hình người đang nằm;
+29. 示-thị-chỉ hiện tượng cát hung trên trời hiển lộ;
+30. 各-các-chỉ việc nói nhưng không biểu đạt được ý;
+
+31. 天-thiên-chỉ bầu trời;
+32. 仌-băng-chỉ vẫn của nước khi vừa mới kết thành bằng;
+33. 冖-mịch-chỉ sự che phủ;
+34. 殳-thù-chỉ tay cầm gậy tre mở đường;
+35. 冓-cấu-chỉ sự kết cấu xếp chồng các thanh gỗ lên nhau;
+36. 卜-bốc-chiêm bốc(bói toán);
+
+37. 爻-hào-sự đan xen giao nhau, Kinh Dịch thời Chu dùng để là "hào";
+38. 凶-hung-chỉ ý nghĩa hung ác;
+39. 毌-quán-chỉ sự xuyên suốt;
+40. 于-vu-chỉ hơi thở nhẹ nhàng;
+41. 豸-trĩ-dáng vẻ con thú rình mồi;
+
+42. 丮-kịch-chỉ tay cầm đồ vật;
+43. 囗-vi-chỉ phạm vi bao quanh;
+44. 皀-tấp-chỉ hạt cốc tốt được bọc bên trong;
+45. 丨-cổn-chỉ nét thẳng đứng;
+46. 丂-khảo-chỉ trạng thái khi thoát ra nhưng bị cản trở;
+47. 夊-tuy-chỉ người đi bộ thong thả, chậm rãi;
+
+48. 丩-cưu-giống hình dây leo của cây bầu quấn vào nhau;
+49. 予-dữ-chỉ sự trao cho, ban tặng;
+50. 乃-nãi-chỉ trạng thái khi không thể thoát thẳng ra được;
+51. 西-tây-chỉ con chim đậu trong tổ để nghỉ ngơi;

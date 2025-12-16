@@ -1,5 +1,30 @@
 Tượng Hình - Tăng Thể
-100. 雷lôi; 101. 州châu; 102. 嶽nhạc; 103. 石thạch; 104. 母mẫu; 105. 眉mi;
-106. 兒nhi; 107. 包bao; 108. 貌mạo; 109. 要yếu; 110. 足túc; 111. 蜀thục; 
-112. 血huyết; 113. 果quả; 114. 刺thích; 115. 巢sào; 116. 冃mạo; 117. 巾cân; 
-118. 弁biện; 119. 衰suy; 120. 兂trâm; 121. 舍xá; 122. 向hướng; 123. 齒xỉ; 124. 夫phu.
+100. 雷-lôi-tượng hình tiếng sấm;
+101. 州-châu-tượng hình vùng đất giữa dòng nước;
+102. 嶽-nhạc-tượng hình núi cao trùng điệp;
+103. 石-thạch-tượng hình đá núi;
+104. 母-mẫu-tượng hình người mẹ;
+105. 眉-mi-tượng hình lông mi ở trên mắt người;
+
+106. 兒-nhi-tượng hình đứa trẻ sơ sinh với thóp đầu chưa khép lại;
+107. 包-bao-tượng hình người mẹ mang thai, trong thai có con;
+108. 貌-mạo-tượng hình khuôn mặt người;
+109. 要-yếu-tượng hình người với hai tay chống nạnh;
+110. 足-túc-tượng hình chân người;
+111. 蜀-thục-tượng hình ấu trùng của loài bướm;
+
+112. 血-huyết-tượng hình đồ đựng có máu của súc vật hiến tế;
+113. 果-quả-tượng hình quả trên cây;
+114. 朿-thứ-tượng hình cây có gai nhọn;
+115. 巢-sào-tượng hình tổ chim trên cây;
+116. 冃-mạo-tượng hình cái mũ;
+117. 巾-cân-tượng hình chiếc khăn;
+
+118. 弁-biện-tượng hình hai tay đang nâng chiếc mũ da biện;
+119. 衰-suy-tượng hình áo tơi bện từ cỏ(áo đi mưa);
+120. 兂-trâm-tượng hình trâm cài tóc;
+121. 舍-xá-tượng hình nhà ở (phòng ốc);
+122. 向-hướng-tượng hình bức tường mở ra 1 ô cửa của căn nhà;
+
+123. 齒-xỉ-tượng hình người há miệng lộ ra bộ răng cửa;
+124. 夫-phu-tượng hình người đàn ông trưởng thành;
