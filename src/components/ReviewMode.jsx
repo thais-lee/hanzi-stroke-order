@@ -15,7 +15,6 @@ const shuffleArray = arr => {
 
 const normalize = s => (s || '').toLowerCase().trim().replace(/\s+/g, ' ');
 
-/* Component */
 export default function ReviewMode() {
   /* Data & settings */
   const [flatList, setFlatList] = useState([]);
@@ -48,6 +47,16 @@ export default function ReviewMode() {
   /* Locks */
   const lockRef = useRef(false);
 
+  /* Responsive writer size state */
+  const [writerSize, setWriterSize] = useState(() => {
+    // initial size: clamp between 140 and 360, prefer 72% of viewport width
+    const w =
+      typeof window !== 'undefined'
+        ? Math.floor(window.innerWidth * 0.72)
+        : 260;
+    return Math.max(140, Math.min(360, w));
+  });
+
   /* Load categories */
   useEffect(() => {
     const cats = loadCharCategories() || [];
@@ -70,6 +79,22 @@ export default function ReviewMode() {
     currentIndexRef.current = currentIndex;
   }, [currentIndex]);
 
+  /* Responsive: listen resize and update writerSize */
+  useEffect(() => {
+    const onResize = () => {
+      const w = Math.floor(window.innerWidth * 0.72); // writer takes ~72% of viewport width
+      const newSize = Math.max(140, Math.min(360, w));
+      setWriterSize(newSize);
+    };
+    window.addEventListener('resize', onResize);
+    // also listen orientationchange for some mobile
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, []);
+
   /* Start quiz */
   const startQuiz = () => {
     const pool = flatList.slice(0, progressIndex + 1);
@@ -90,6 +115,20 @@ export default function ReviewMode() {
     setStatus('playing');
   };
 
+  /* Setup / cleanup writer safely */
+  const destroyWriter = () => {
+    // hanzi-writer does not have official destroy, so clear DOM and instance ref
+    try {
+      if (writerInstance.current) {
+        // if writer has stop/clear methods in future, call them
+      }
+      if (writerRef.current) writerRef.current.innerHTML = '';
+    } catch (e) {
+      // ignore
+    }
+    writerInstance.current = null;
+  };
+
   /* Prepare question */
   const prepareQuestionForIndex = index => {
     setUserInput('');
@@ -98,44 +137,69 @@ export default function ReviewMode() {
     setShowMeaning(false);
     setTimeLeft(timeLimit > 0 ? timeLimit : 0);
 
-    // cleanup writer
-    if (writerInstance.current) {
-      if (writerRef.current) writerRef.current.innerHTML = '';
-      writerInstance.current = null;
-    }
+    // cleanup writer before init
+    destroyWriter();
 
     const q = questions[index];
     if (!q) return;
     if (q.type === 'write') {
+      // small delay lets DOM settle on mobile when orientation changes
       setTimeout(() => initWriterForQuestion(q), 80);
     } else {
       if (writerRef.current) writerRef.current.innerHTML = '';
     }
   };
 
+  /* Init writer with current writerSize */
   const initWriterForQuestion = q => {
     if (!writerRef.current) return;
-    writerRef.current.innerHTML = '';
+    // destroy previous instance
+    destroyWriter();
+
+    const size = writerSize;
+    const base = 260; // original design reference size
+    const scale = size / base;
+    const drawingWidth = Math.max(8, Math.round(18 * scale)); // scale stroke width
+    const padding = Math.max(4, Math.round(8 * scale));
+
+    // create writer with dynamic size
     writerInstance.current = HanziWriter.create(writerRef.current, q.value, {
-      width: 260,
-      height: 260,
-      padding: 8,
+      width: size,
+      height: size,
+      padding,
       showOutline: false,
       showCharacter: false,
       strokeColor: '#222222',
       radicalColor: '#16a34a',
       outlineColor: '#cccccc',
-      drawingWidth: 18,
+      drawingWidth,
       highlightOnComplete: true,
+      // adjust stroke animation speed if needed:
+      delayBetweenStrokes: Math.max(120, Math.round(260 * (1 / scale))),
     });
 
+    // bind quiz hooks
     writerInstance.current.quiz({
-      onMistake: () => {},
+      onMistake: () => {
+        // optional visual feedback
+      },
       onComplete: () => {
         handleAnswer(true, q);
       },
     });
   };
+
+  /* If writerSize changes while question is active, re-init so size matches */
+  useEffect(() => {
+    if (status !== 'playing') return;
+    const q = questions[currentIndex];
+    if (!q) return;
+    if (q.type === 'write') {
+      // re-create writer to match new size
+      initWriterForQuestion(q);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [writerSize]);
 
   /* Effect: prepare when playing/currentIndex/questions changes */
   useEffect(() => {
@@ -341,18 +405,6 @@ export default function ReviewMode() {
         <>
           <div className="big-char">{q.value}</div>
 
-          {/* Phiên âm (nếu có)
-          <div
-            style={{
-              textAlign: 'center',
-              color: '#374151',
-              fontWeight: 600,
-              marginBottom: 6,
-            }}
-          >
-            {q.reading ? `(${q.reading})` : q.label}
-          </div> */}
-
           {/* Nút hiển thị nghĩa */}
           <div style={{ textAlign: 'center', marginBottom: 8 }}>
             <button className="btn-small" onClick={toggleMeaning}>
@@ -371,7 +423,6 @@ export default function ReviewMode() {
                 fontWeight: 600,
               }}
             >
-              
               {q.meaning}
             </div>
           )}
@@ -404,9 +455,7 @@ export default function ReviewMode() {
         </>
       ) : (
         <>
-          {/* ========== WRITE MODE: CHỈ HIỂN THỊ PHIÊN ÂM + NGHĨA (KHÔNG HIỆN CHỮ HÁN) ========== */}
-
-          {/* Hiển thị PHIÊN ÂM (nếu có) — LƯU Ý: không hiển thị q.label hoặc q.value */}
+          {/* WRITE MODE: chỉ hiển thị phiên âm + nghĩa, writer responsive */}
           <div
             style={{
               textAlign: 'center',
@@ -418,7 +467,6 @@ export default function ReviewMode() {
             {q.reading ? `${q.reading}` : '—'}
           </div>
 
-          {/* Hiển thị NGHĨA nếu user mở hoặc tự bật khi sai */}
           <div style={{ textAlign: 'center', marginBottom: 8 }}>
             <button className="btn-small" onClick={toggleMeaning}>
               {showMeaning ? 'Ẩn giải nghĩa' : 'Xem giải nghĩa'}
@@ -440,9 +488,17 @@ export default function ReviewMode() {
             </div>
           )}
 
-          {/* HanziWriter canvas (ẩn chữ mẫu by default) */}
-          <div className="writer-box">
-            <div ref={writerRef} />
+          {/* writer box: inline style dùng writerSize để gọn responsive */}
+          <div
+            className="writer-box"
+            style={{
+              width: writerSize,
+              height: writerSize,
+              maxWidth: '90vw',
+              maxHeight: '90vw',
+            }}
+          >
+            <div ref={writerRef} style={{ width: '100%', height: '100%' }} />
           </div>
 
           {!feedback ? (

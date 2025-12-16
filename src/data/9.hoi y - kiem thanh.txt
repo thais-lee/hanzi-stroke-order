@@ -1,6 +1,26 @@
-Hội ý - Kiêm Thanh
-102 . 春 xuân; 103 . 吏 lại; 104 . 葬 táng; 105 . 喪 tang; 106 . 返 phản; 
-107 . 鉤 câu; 108 . 警 cảnh; 109 . 誼 nghị; 110 . 整 chỉnh; 111 . 政 chính; 
-112 . 劃 hoạch;113 . 籲 dụ; 114 . 愷 khải; 115 . 阱 tỉnh; 116 . 貧 bần; 
-117 . 瘧 ngược; 118 . 冠 quan; 119 . 仲 trọng; 120 . 授 thụ; 121 . 姓 tính; 
-122 . 婚 hôn; 123 . 姻 nhân;124 . 隙 kích; 125 . 字 tự; 126 . 閨 khuê;
+Hội Ý - Kiêm Thanh
+102. 春-xuân-chỉ mùa xuân;
+103. 吏-lại-chỉ cho quan lại;
+104. 葬-táng-chỉ việc mai táng, chôn cất;
+105. 喪-tang-chỉ sự tang tóc mất mát;
+106. 返-phản-phàn hồi(quay trở lại);
+107. 鉤-câu-chỉ cái móc cong;
+108. 警-cảnh-chỉ sự răn nhắc, cảnh báo;
+109. 誼-nghị-chỉ cho việc hợp với lẽ phải;
+110. 整-chỉnh-chỉ sự chỉnh tề, ngay ngắn;
+111. 政-chính-chỉ cho việc làm chính trị một cách công minh chính trực;
+112. 劃-hoạch-dùng dao để khắc họa(khắc hoặc vạch);
+113. 吁-hu-chỉ sự kinh ngạc hoặc cảm thán;
+114. 愷-khải-chỉ sự vui vẻ;
+115. 阱-tỉnh-chỉ cho hố được đào để bẫy thú;
+116. 貧-bần-chỉ sự bần cùng (nghèo khó);
+117. 瘧-ngược-chỉ tên bệnh, tức là bệnh ngược(sốt rét);
+118. 冠-quan-chỉ cho cái mũ;
+119. 仲-trọng-chỉ cho hàng thứ hai giữa anh em;
+120. 授-thụ-chỉ cho việc ban cho, trao cho;
+121. 姓-tính-chỉ cho họ, dòng họ;
+122. 婚-hôn-chỉ cho việc cưới gả, kết hôn;
+123. 姻-nhân-chỉ cho nhà chàng rể;
+124. 隙-khích-chỉ khe hở, vết nứt;
+125. 字-tự-chỉ cho văn tự, chữ viết;
+126. 閨-khuê-chỉ cho cửa nhỏ trên tròn dưới vuông;

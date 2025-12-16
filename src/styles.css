@@ -593,16 +593,19 @@ input[type="number"] {
 
 /* Ô viết chữ */
 .writer-box {
-  margin: 0.5rem auto;
-  width: 280px;
-  height: 280px;
+  margin: 0.75rem auto;
+  width: min(90vw, 320px);   /* co theo màn hình */
+  aspect-ratio: 1 / 1;      /* luôn vuông */
   display: flex;
   align-items: center;
   justify-content: center;
+
   border-radius: var(--radius);
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+  touch-action: none; /* QUAN TRỌNG: tránh zoom */
 }
 
 /* Nhóm input cho chế độ đọc */
@@ -783,3 +786,72 @@ input[type="number"] {
     font-size: 13px;
   }
 }
+
+/* writer responsive improvements */
+.writer-box {
+  margin: 0.5rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 18px rgba(16,24,40,0.04);
+  /* width / height will be set inline by component (writerSize) */
+  overflow: hidden;
+}
+
+/* Ensure inner canvas (hanzi-writer) fills box */
+.writer-box > div {
+  width: 100%;
+  height: 100%;
+}
+
+/* improve touch target for controls on mobile */
+.controls-row .btn-small {
+  padding: 10px 14px;
+  font-size: 0.95rem;
+}
+
+/* tabs styling (if you still need tabs styling) */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  justify-content: center;
+}
+.tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tab-btn.active {
+  background: linear-gradient(180deg, #4ade80, #2eb67d);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(46,204,113,0.18);
+}
+
+/* small devices: stack controls, make inputs full width */
+@media (max-width: 720px) {
+  .input-group {
+    flex-direction: column;
+  }
+  .input-field.big-input {
+    width: 100%;
+  }
+  .controls-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .quiz-header {
+    font-size: 0.9rem;
+  }
+  .big-char {
+    font-size: clamp(36px, 18vw, 80px);
+    height: auto;
+  }
+}
+
