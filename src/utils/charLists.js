@@ -1,31 +1,58 @@
+/* eslint-disable no-useless-escape */
 // src/utils/charLists.js
-// Đọc tất cả .txt trong src/data theo format:
-// Dòng 1: tên nhóm
-// Các dòng sau: "1. 萬vạn; 2. 龜quy; ..." (ngăn cách bằng dấu ';')
 
 /**
- * Tách 1 mục (token) -> { label: hiển thị đầy đủ, value: ký tự Hán đầu tiên }
- * - Giữ nguyên label (không bỏ số thứ tự, khoảng trắng, phiên âm)
- * - Lấy value là ký tự Hán đầu tiên trong chuỗi
+ * Tách 1 mục (token) theo format:
+ *  - Mới: "1. 萬-vạn-tượng hình con bọ cạp"
+ *  - Cũ:  "1. 萬vạn"
+ *
+ * Trả về:
+ * {
+ *   label: chuỗi hiển thị đầy đủ,
+ *   value: ký tự Hán,
+ *   reading: phiên âm Hán Việt (nếu có),
+ *   meaning: ý nghĩa ban đầu (nếu có)
+ * }
  */
 function parseItem(token) {
   const label = token.trim();
   if (!label) return null;
 
-  // Lấy ký tự Hán đầu tiên (Unicode Script=Han)
-  const m = label.match(/\p{Script=Han}/u);
-  const value = m ? m[0] : null;
-  if (!value) return null;
+  // Bỏ số thứ tự phía trước: "1. ", "2 .", ...
+  const clean = label.replace(/^\d+\s*[\.\)]\s*/, '');
 
-  return { label, value };
+  // Ưu tiên format mới: Hán - âm - nghĩa
+  const parts = clean.split('-').map(s => s.trim());
+
+  let han = null;
+  let reading = null;
+  let meaning = null;
+
+  if (parts.length >= 2) {
+    // phần 1: Hán tự (lấy ký tự Han đầu tiên)
+    const m = parts[0].match(/\p{Script=Han}/u);
+    if (m) han = m[0];
+
+    reading = parts[1] || null;
+    meaning = parts.slice(2).join(' - ') || null;
+  } else {
+    // fallback dữ liệu cũ
+    const m = clean.match(/\p{Script=Han}/u);
+    if (m) han = m[0];
+  }
+
+  if (!han) return null;
+
+  return {
+    label, // hiển thị đầy đủ
+    value: han, // dùng cho HanziWriter
+    reading, // phiên âm Hán Việt
+    meaning, // ý nghĩa ban đầu
+  };
 }
 
 /**
- * Parse nội dung 1 file .txt -> { id, label, items, chars }
- * - id lấy từ tên file (không đuôi)
- * - label = dòng đầu tiên
- * - items = mảng {label, value}
- * - chars = mảng ký tự Hán (value) đã khử trùng lặp
+ * Parse nội dung 1 file .txt
  */
 export function parseCategoryText(text, fileId = 'unknown') {
   const lines = (text || '')
@@ -35,9 +62,8 @@ export function parseCategoryText(text, fileId = 'unknown') {
 
   if (!lines.length) return null;
 
-  const label = lines[0]; // dòng 1 là tên nhóm
+  const label = lines[0]; // dòng đầu: tên nhóm
 
-  // nối các dòng còn lại -> tách theo dấu ;  (cho phép ; dính hoặc có khoảng trắng)
   const rest = lines.slice(1).join(' ');
   const rawTokens = rest
     .split(/;+/)
@@ -50,6 +76,7 @@ export function parseCategoryText(text, fileId = 'unknown') {
     if (it) items.push(it);
   }
 
+  // Danh sách chữ Hán không trùng
   const seen = new Set();
   const chars = [];
   for (const it of items) {
@@ -63,12 +90,14 @@ export function parseCategoryText(text, fileId = 'unknown') {
 }
 
 /**
- * Load tất cả file .txt trong src/data (Vite bundler)
- * Trả về: [{ id, label, items, chars }, ...]
+ * Load tất cả file .txt trong src/data (Vite)
  */
 export function loadCharCategories() {
-  // đọc raw text các file trong /src/data
-  const files = import.meta.glob('/src/data/*.txt', { as: 'raw', eager: true });
+  const files = import.meta.glob('/src/data/*.txt', {
+    as: 'raw',
+    eager: true,
+  });
+
   const out = [];
 
   for (const fullPath in files) {
@@ -77,11 +106,10 @@ export function loadCharCategories() {
       .split('/')
       .pop()
       .replace(/\.txt$/i, '');
+
     const cat = parseCategoryText(text, id);
     if (cat && cat.items.length) out.push(cat);
   }
 
-  // Sắp xếp theo tên nhóm (tùy thích)
-  // out.sort((a, b) => a.label.localeCompare(b.label, 'vi'));
   return out;
 }
