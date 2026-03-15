@@ -33,15 +33,18 @@ export default function App() {
 
   // ===== Nguồn ký tự =====
   const [charSource, setCharSource] = useState('manual'); // 'manual' | 'list'
+  const [showUniqueChars, setShowUniqueChars] = useState(false); // chỉ dùng cho manual, nếu true thì dù nhập nhiều lần 1 chữ cũng chỉ tính là 1 ký tự (dùng cho ZIP/PDF)
 
   // --- Nhập tay ---
   const [inputStr, setInputStr] = useState('佛法僧');
   const manualChars = useMemo(() => {
     const filtered = Array.from(inputStr || '').filter(ch => ch.trim());
+
+    if (showUniqueChars) return filtered.slice(0, 1000);
     const unique = [];
     for (const ch of filtered) if (!unique.includes(ch)) unique.push(ch);
     return unique;
-  }, [inputStr]);
+  }, [inputStr, showUniqueChars]);
 
   // --- Từ các file .txt trong src/data ---
   const categories = useMemo(() => loadCharCategories(), []);
@@ -417,20 +420,47 @@ export default function App() {
                 {/* Nếu nhập tay → chips; nếu từ file → dropdown ký tự */}
                 {charSource === 'manual' ? (
                   !!manualChars.length && (
-                    <div className="row" style={{ alignItems: 'flex-start' }}>
-                      <label>Chọn ký tự</label>
-                      <div className="chips">
-                        {manualChars.map(ch => (
-                          <button
-                            key={ch}
-                            className={
-                              'chip' + (selected === ch ? ' active' : '')
-                            }
-                            onClick={() => setSelected(ch)}
-                          >
-                            {ch}
-                          </button>
-                        ))}
+                    <div className="column" style={{ alignItems: 'center' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: 8,
+                          alignItems: 'center',
+                          marginBottom: 8
+                        }}
+                      >
+                        <label style={{ minWidth: 130, marginRight: 30 }}>
+                          Hiển thị trùng lặp
+                        </label>
+                        <input
+                          type="checkbox"
+                          checked={showUniqueChars}
+                          onChange={e => setShowUniqueChars(e.target.checked)}
+                        />
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: 8,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <label style={{ minWidth: 130, marginRight: 30 }}>
+                          Chọn ký tự
+                        </label>
+                        <div className="chips">
+                          {manualChars.map(ch => (
+                            <button
+                              key={ch}
+                              className={
+                                'chip' + (selected === ch ? ' active' : '')
+                              }
+                              onClick={() => setSelected(ch)}
+                            >
+                              {ch}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )

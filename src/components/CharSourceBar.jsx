@@ -14,6 +14,8 @@ export default function CharSourceBar({
   setSelected,
   // expose computed active chars lên App
   setActiveCharsExternal,
+  showUniqueChars = false, // nếu true thì dù nhập nhiều lần 1 chữ cũng chỉ tính là 1 ký tự (dùng cho ZIP/PDF)
+  setShowUniqueChars, // chỉ để App có thể reset về false khi cần
 }) {
   const [mode, setMode] = useState(MODE_MANUAL);
   const [{ list, map }, setData] = useState({ list: [], map: {} });
@@ -99,7 +101,15 @@ export default function CharSourceBar({
 
       {/* Dòng 2: khu vực chọn ký tự */}
       {mode === MODE_MANUAL ? (
-        <div className="row" style={{ alignItems: 'flex-start' }}>
+        <div className="row" style={{ alignItems: 'center', gap: 10 }}>
+          <label style={{ minWidth: 130 }}>Hiển thị trùng lặp</label>
+          <input
+            style={{marginLeft: 50}}
+            type="checkbox"
+            checked={showUniqueChars}
+            onChange={e => setShowUniqueChars(e.target.checked)}
+          />
+
           <label style={{ minWidth: 130 }}>Chọn ký tự</label>
           <div className="chips">
             {manualChars.map(ch => (
