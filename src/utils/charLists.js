@@ -98,9 +98,24 @@ export function loadCharCategories() {
     eager: true,
   });
 
+  // 1. Lấy tất cả các đường dẫn (keys) từ object files
+  const filePaths = Object.keys(files);
+
+  // 2. Sắp xếp các đường dẫn theo số thứ tự của tên file
+  filePaths.sort((a, b) => {
+    // Lấy tên file (ví dụ: "1.txt" -> "1")
+    const idA = a.split('/').pop().replace(/\.txt$/i, '');
+    const idB = b.split('/').pop().replace(/\.txt$/i, '');
+    
+    // Chuyển sang kiểu số để so sánh (Numerical Sort)
+    // Nếu dùng mặc định nó sẽ xếp: 1, 10, 2, 20...
+    return parseInt(idA, 10) - parseInt(idB, 10);
+  });
+
   const out = [];
 
-  for (const fullPath in files) {
+  // 3. Lặp qua danh sách đường dẫn ĐÃ SẮP XẾP
+  for (const fullPath of filePaths) {
     const text = files[fullPath];
     const id = fullPath
       .split('/')
@@ -108,7 +123,9 @@ export function loadCharCategories() {
       .replace(/\.txt$/i, '');
 
     const cat = parseCategoryText(text, id);
-    if (cat && cat.items.length) out.push(cat);
+    if (cat && cat.items.length) {
+      out.push(cat);
+    }
   }
 
   return out;
