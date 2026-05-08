@@ -2,7 +2,7 @@
 
 // ─── Cấu hình ────────────────────────────────────────────────────────────────
 // Thay YOUR_GITHUB_USERNAME bằng username GitHub của bạn (sau khi fork hanzi-writer-data)
-const FORK_CDN = 'https://cdn.jsdelivr.net/gh/thais-lee/hanzi-writer-data@master';
+const FORK_CDN = 'https://cdn.jsdelivr.net/gh/thais-lee/hanzi-custom-data@master';
 
 // CDN gốc — fallback cho chữ phổ thông không có trong npm package
 const OFFICIAL_CDN = 'https://cdn.jsdelivr.net/npm/hanzi-writer-data@latest';
